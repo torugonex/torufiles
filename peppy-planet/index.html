@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ペピーの星</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f9f9f7;
+    --panel: #fcfcfb;
+    --text: #0b0b0b;
+    --text-2: #52514e;
+    --muted: #898781;
+    --border: rgba(11, 11, 11, 0.12);
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --male: #2a78d6;
+    --female: #eb6834;
+    --peppy: #1baf7a;
+    --special: #0b0b0b;
+    --special-mark: #ffffff;
+    --accent: #2a78d6;
+    --accent-text: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --bg: #0d0d0d;
+      --panel: #1a1a19;
+      --text: #ffffff;
+      --text-2: #c3c2b7;
+      --muted: #898781;
+      --border: rgba(255, 255, 255, 0.12);
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --male: #3987e5;
+      --female: #d95926;
+      --peppy: #199e70;
+      --special: #ffffff;
+      --special-mark: #ffffff;
+      --accent: #3987e5;
+      --accent-text: #ffffff;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --panel: #1a1a19;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --muted: #898781;
+    --border: rgba(255, 255, 255, 0.12);
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --male: #3987e5;
+    --female: #d95926;
+    --peppy: #199e70;
+    --special: #ffffff;
+    --special-mark: #ffffff;
+    --accent: #3987e5;
+    --accent-text: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  }
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1rem; margin: 0 0 12px; }
+  .lead { color: var(--text-2); margin: 0 0 20px; font-size: 0.9rem; line-height: 1.6; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .powers {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .power {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .power:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .power input { margin-top: 4px; }
+  .power b { display: block; }
+  .power span { color: var(--text-2); font-size: 0.85rem; }
+  .options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    align-items: center;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+  }
+  .options label { display: flex; align-items: center; gap: 6px; }
+  .hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  button, select {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover, select:hover { border-color: var(--muted); }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+    min-width: 5.5em;
+  }
+  label.speed { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--text-2); }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .stat .label { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-2); }
+  .stat .value { font-size: 1.25rem; font-weight: 600; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .swatch.special {
+    background: var(--special);
+    border-radius: 50%;
+    width: 8px; height: 8px;
+  }
+  .board {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  canvas { display: block; width: 100%; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 0.85rem;
+    color: var(--text-2);
+    margin: 8px 0 0;
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .cell-special {
+    width: 10px; height: 10px; border-radius: 2px;
+    display: grid; place-items: center;
+    background: var(--muted);
+  }
+  .cell-special::after {
+    content: ""; width: 4px; height: 4px; border-radius: 1px; background: var(--special-mark);
+  }
+  .chart-wrap { position: relative; }
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .tooltip div { display: flex; align-items: center; gap: 6px; }
+  .tooltip .swatch { width: 8px; height: 8px; }
+  details { margin-top: 8px; font-size: 0.9rem; }
+  summary { cursor: pointer; }
+  details ul { color: var(--text-2); padding-left: 20px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ペピーの星</h1>
+  <p class="lead">
+    この星の生き物には male（♂）・female（♀）・peppy（P）の3つの性があります。
+    3つの性がそろった交配で生まれた子（3性の子）は、特別な力を持っています。
+    どんな力を持たせるか選んで、星の行く末を見守りましょう。
+  </p>
+
+  <section class="card" aria-labelledby="setup-title">
+    <h2 id="setup-title">世界の設定</h2>
+    <div class="powers" role="radiogroup" aria-label="3性の子の力">
+      <label class="power"><input type="radio" name="power" value="none">
+        <div><b>力なし</b><span>比べるための基準。3性の子も普通の生き物と同じです。</span></div></label>
+      <label class="power"><input type="radio" name="power" value="longevity">
+        <div><b>長寿</b><span>混み合いに強い。周りに4匹いても死にません（普通は3匹まで）。</span></div></label>
+      <label class="power"><input type="radio" name="power" value="guardian">
+        <div><b>守護</b><span>隣にいる仲間を孤独から守る。周りが1匹だけでも生き残れます。</span></div></label>
+      <label class="power"><input type="radio" name="power" value="fertility" checked>
+        <div><b>多産</b><span>子宝をもたらす。3性の子が隣にいる空きマスは、周りが2匹や4匹でも誕生します。</span></div></label>
+      <label class="power"><input type="radio" name="power" value="wildcard">
+        <div><b>万能</b><span>どの性にもなれる。交配では足りない性の代わりになり、3性の交配を起こしやすくします。</span></div></label>
+    </div>
+    <div class="options">
+      <label><input type="checkbox" id="inherit"> 力が子に受け継がれる（親に3性の子がいれば50%の確率）</label>
+      <label>2性の交配で生まれる子
+        <select id="childRule">
+          <option value="missing">両親にいない性（♂＋♀ → P）</option>
+          <option value="majority">周りに多い方の性</option>
+          <option value="random">両親のどちらかの性</option>
+        </select>
+      </label>
+      <label>最初の生き物の割合
+        <select id="density">
+          <option value="0.15">15%</option>
+          <option value="0.3" selected>30%</option>
+          <option value="0.45">45%</option>
+        </select>
+      </label>
+    </div>
+    <p class="hint">設定を変えると、同じ初期配置で最初からやり直します。力の違いを見比べるときに便利です。</p>
+  </section>
+
+  <div class="controls">
+    <button id="play" class="primary">開始</button>
+    <button id="step">1世代進める</button>
+    <button id="restart">同じ配置でやり直す</button>
+    <button id="newWorld">新しい世界をつくる</button>
+    <label class="speed">速度
+      <input id="speed" type="range" min="1" max="60" value="15">
+    </label>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="label">世代</div><div class="value" id="gen">0</div></div>
+    <div class="stat"><div class="label"><i class="swatch" style="background:var(--male)"></i>male ♂</div><div class="value" id="countM">0</div></div>
+    <div class="stat"><div class="label"><i class="swatch" style="background:var(--female)"></i>female ♀</div><div class="value" id="countF">0</div></div>
+    <div class="stat"><div class="label"><i class="swatch" style="background:var(--peppy)"></i>peppy P</div><div class="value" id="countP">0</div></div>
+    <div class="stat"><div class="label"><i class="swatch special"></i>うち3性の子</div><div class="value" id="countS">0</div></div>
+    <div class="stat"><div class="label">これまでの誕生</div><div class="value" style="font-size:0.95rem;line-height:1.5">3性 <span id="bornTriple">0</span><br>2性 <span id="bornPair">0</span></div></div>
+  </div>
+
+  <div class="board"><canvas id="board" aria-label="ペピーの星の盤面"></canvas></div>
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--male)"></i>male ♂</span>
+    <span><i class="swatch" style="background:var(--female)"></i>female ♀</span>
+    <span><i class="swatch" style="background:var(--peppy)"></i>peppy P</span>
+    <span><i class="cell-special"></i>中央に白い印＝3性の子</span>
+  </div>
+
+  <section class="card" style="margin-top:16px" aria-labelledby="chart-title">
+    <h2 id="chart-title">個体数の移り変わり（直近600世代）</h2>
+    <div class="legend" style="margin:0 0 8px">
+      <span><i class="swatch" style="background:var(--male)"></i>male ♂</span>
+      <span><i class="swatch" style="background:var(--female)"></i>female ♀</span>
+      <span><i class="swatch" style="background:var(--peppy)"></i>peppy P</span>
+      <span><svg width="18" height="4" aria-hidden="true"><line x1="0" y1="2" x2="18" y2="2" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/></svg>3性の子</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chart" aria-label="性別ごとの個体数の推移グラフ"></canvas>
+      <div class="tooltip" id="tooltip" hidden></div>
+    </div>
+  </section>
+
+  <details>
+    <summary>この星のルール</summary>
+    <ul>
+      <li><b>生存</b>：周りの8マスに2匹か3匹いれば生き残り、それ以外は死にます（性は関係ありません）。</li>
+      <li><b>誕生</b>：空きマスの周りにちょうど3匹いて、その中に2つ以上の性があれば子が生まれます。同じ性だけでは生まれません。</li>
+      <li><b>3性の交配</b>：3匹が♂・♀・P 1匹ずつなら、3性の子が生まれます。性はランダムで、選んだ力を持ちます。</li>
+      <li><b>2性の交配</b>：2つの性だけなら普通の子が生まれます。子の性は設定で選べます。</li>
+      <li>盤面の端は反対側とつながっています。</li>
+    </ul>
+  </details>
+</main>
+
+<script>
+(() => {
+  const COLS = 120;
+  const ROWS = 80;
+  const N = COLS * ROWS;
+  const HISTORY = 600;
+  const SEX_KEYS = ['', 'male', 'female', 'peppy'];
+  const SEX_NAMES = ['', 'male ♂', 'female ♀', 'peppy P'];
+
+  const boardCanvas = document.getElementById('board');
+  const bctx = boardCanvas.getContext('2d');
+  const chartCanvas = document.getElementById('chart');
+  const cctx = chartCanvas.getContext('2d');
+  const tooltip = document.getElementById('tooltip');
+  const playBtn = document.getElementById('play');
+  const speedInput = document.getElementById('speed');
+  const el = (id) => document.getElementById(id);
+
+  // 周囲8マスの番号を先に計算しておく（端は反対側とつながる）
+  const NB = new Int32Array(N * 8);
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      let k = (y * COLS + x) * 8;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          NB[k++] = ((y + dy + ROWS) % ROWS) * COLS + (x + dx + COLS) % COLS;
+        }
+      }
+    }
+  }
+
+  // 同じ種(seed)なら同じ結果になる乱数
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  let sex = new Uint8Array(N);      // 0=空き, 1=♂, 2=♀, 3=P
+  let special = new Uint8Array(N);  // 1=3性の子
+  let nextSex = new Uint8Array(N);
+  let nextSpecial = new Uint8Array(N);
+  let rnd = Math.random;
+  let seed = 1;
+  let settings = {};
+  let generation = 0;
+  let bornTriple = 0;
+  let bornPair = 0;
+  let history = [];
+  let running = false;
+  let lastTick = 0;
+  let cellSize = 8;
+  let palette = {};
+
+  function readSettings() {
+    settings = {
+      power: document.querySelector('input[name="power"]:checked').value,
+      inherit: el('inherit').checked,
+      childRule: el('childRule').value,
+      density: Number(el('density').value),
+    };
+  }
+
+  function createWorld() {
+    readSettings();
+    rnd = mulberry32(seed);
+    for (let i = 0; i < N; i++) {
+      sex[i] = rnd() < settings.density ? 1 + Math.floor(rnd() * 3) : 0;
+      special[i] = 0;
+    }
+    generation = 0;
+    bornTriple = 0;
+    bornPair = 0;
+    history = [];
+    record();
+    draw();
+  }
+
+  function randomOf(list) {
+    return list[Math.floor(rnd() * list.length)];
+  }
+
+  function step() {
+    const { power, inherit, childRule } = settings;
+    for (let i = 0; i < N; i++) {
+      // 周りの数を性別ごとに数える（real=全員, plain=3性の子以外）
+      let n = 0, sp = 0;
+      let r1 = 0, r2 = 0, r3 = 0, p1 = 0, p2 = 0, p3 = 0;
+      const base = i * 8;
+      for (let k = 0; k < 8; k++) {
+        const j = NB[base + k];
+        const s = sex[j];
+        if (!s) continue;
+        n++;
+        if (s === 1) r1++; else if (s === 2) r2++; else r3++;
+        if (special[j]) sp++;
+        else if (s === 1) p1++; else if (s === 2) p2++; else p3++;
+      }
+
+      if (sex[i]) {
+        // 生存判定
+        let lo = 2, hi = 3;
+        if (power === 'longevity' && special[i]) hi = 4;
+        if (power === 'guardian' && sp > 0) lo = 1;
+        const alive = n >= lo && n <= hi;
+        nextSex[i] = alive ? sex[i] : 0;
+        nextSpecial[i] = alive ? special[i] : 0;
+        continue;
+      }
+
+      // 誕生判定
+      nextSex[i] = 0;
+      nextSpecial[i] = 0;
+      const canBirth = n === 3 || (power === 'fertility' && sp > 0 && (n === 2 || n === 4));
+      if (!canBirth) continue;
+
+      let kinds = (r1 > 0) + (r2 > 0) + (r3 > 0);
+      if (power === 'wildcard') {
+        kinds = Math.min(3, (p1 > 0) + (p2 > 0) + (p3 > 0) + sp);
+      }
+      if (kinds < 2) continue;
+
+      if (kinds === 3) {
+        nextSex[i] = 1 + Math.floor(rnd() * 3);
+        nextSpecial[i] = 1;
+        bornTriple++;
+        continue;
+      }
+
+      const counts = [0, r1, r2, r3];
+      let child;
+      if (childRule === 'missing') {
+        const missing = [1, 2, 3].filter((s) => counts[s] === 0);
+        child = randomOf(missing);
+      } else if (childRule === 'majority') {
+        const most = Math.max(r1, r2, r3);
+        child = randomOf([1, 2, 3].filter((s) => counts[s] === most));
+      } else {
+        // 両親のどちらか：周りの生き物から1匹選んでその性を受け継ぐ
+        let pickIndex = Math.floor(rnd() * n);
+        for (let k = 0; k < 8; k++) {
+          const s = sex[NB[base + k]];
+          if (s && pickIndex-- === 0) { child = s; break; }
+        }
+      }
+      nextSex[i] = child;
+      nextSpecial[i] = inherit && sp > 0 && rnd() < 0.5 ? 1 : 0;
+      bornPair++;
+    }
+    [sex, nextSex] = [nextSex, sex];
+    [special, nextSpecial] = [nextSpecial, special];
+    generation++;
+    record();
+  }
+
+  function record() {
+    const c = [0, 0, 0, 0];
+    let s = 0;
+    for (let i = 0; i < N; i++) {
+      c[sex[i]]++;
+      if (special[i]) s++;
+    }
+    history.push({ gen: generation, m: c[1], f: c[2], p: c[3], s });
+    if (history.length > HISTORY) history.shift();
+  }
+
+  // ---------- 描画 ----------
+
+  function readPalette() {
+    const css = getComputedStyle(document.documentElement);
+    const v = (name) => css.getPropertyValue(name).trim();
+    palette = {
+      panel: v('--panel'),
+      text: v('--text'),
+      text2: v('--text-2'),
+      muted: v('--muted'),
+      grid: v('--grid'),
+      axis: v('--axis'),
+      sex: ['', v('--male'), v('--female'), v('--peppy')],
+      special: v('--special'),
+      mark: v('--special-mark'),
+    };
+  }
+
+  function setupCanvas(canvas, ctx, width, height) {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.height = height + 'px';
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function resize() {
+    const width = boardCanvas.parentElement.clientWidth;
+    cellSize = width / COLS;
+    setupCanvas(boardCanvas, bctx, width, cellSize * ROWS);
+    const chartWidth = chartCanvas.parentElement.clientWidth;
+    setupCanvas(chartCanvas, cctx, chartWidth, Math.max(180, Math.min(260, chartWidth * 0.3)));
+    draw();
+  }
+
+  function drawBoard() {
+    bctx.fillStyle = palette.panel;
+    bctx.fillRect(0, 0, cellSize * COLS, cellSize * ROWS);
+    const gap = cellSize >= 5 ? 1 : 0;
+    for (let s = 1; s <= 3; s++) {
+      bctx.fillStyle = palette.sex[s];
+      for (let i = 0; i < N; i++) {
+        if (sex[i] !== s) continue;
+        const x = (i % COLS) * cellSize;
+        const y = Math.floor(i / COLS) * cellSize;
+        bctx.fillRect(x, y, cellSize - gap, cellSize - gap);
+      }
+    }
+    // 3性の子は中央に白い印
+    if (cellSize >= 4) {
+      const m = Math.max(2, Math.round(cellSize * 0.36));
+      const off = (cellSize - gap - m) / 2;
+      bctx.fillStyle = palette.mark;
+      for (let i = 0; i < N; i++) {
+        if (!special[i] || !sex[i]) continue;
+        bctx.fillRect((i % COLS) * cellSize + off, Math.floor(i / COLS) * cellSize + off, m, m);
+      }
+    }
+  }
+
+  const chartPad = { top: 10, right: 72, bottom: 24, left: 44 };
+  let chartGeom = null;
+
+  function niceStep(max) {
+    const raw = max / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / mag;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+  }
+
+  function drawChart(hoverIndex = -1) {
+    const w = chartCanvas.clientWidth;
+    const h = chartCanvas.clientHeight;
+    cctx.clearRect(0, 0, w, h);
+    const plotW = w - chartPad.left - chartPad.right;
+    const plotH = h - chartPad.top - chartPad.bottom;
+    const maxVal = Math.max(10, ...history.map((d) => Math.max(d.m, d.f, d.p, d.s)));
+    const yStep = niceStep(maxVal);
+    const yMax = Math.ceil(maxVal / yStep) * yStep;
+    const firstGen = history[0].gen;
+    const span = Math.max(HISTORY - 1, 1);
+    const xOf = (gen) => chartPad.left + ((gen - firstGen) / span) * plotW;
+    const yOf = (v) => chartPad.top + plotH - (v / yMax) * plotH;
+    chartGeom = { xOf, firstGen, span, plotW };
+
+    // 目盛りと格子線
+    cctx.font = '11px system-ui, sans-serif';
+    cctx.fillStyle = palette.muted;
+    cctx.strokeStyle = palette.grid;
+    cctx.lineWidth = 1;
+    cctx.textAlign = 'right';
+    cctx.textBaseline = 'middle';
+    for (let v = 0; v <= yMax; v += yStep) {
+      const y = Math.round(yOf(v)) + 0.5;
+      cctx.beginPath();
+      cctx.moveTo(chartPad.left, y);
+      cctx.lineTo(chartPad.left + plotW, y);
+      cctx.strokeStyle = v === 0 ? palette.axis : palette.grid;
+      cctx.stroke();
+      cctx.fillText(v.toLocaleString(), chartPad.left - 6, y);
+    }
+    cctx.textAlign = 'center';
+    cctx.textBaseline = 'top';
+    const xStep = 100;
+    for (let g = Math.ceil(firstGen / xStep) * xStep; g <= firstGen + span; g += xStep) {
+      cctx.fillText(g.toLocaleString(), xOf(g), chartPad.top + plotH + 6);
+    }
+
+    // 折れ線
+    const series = [
+      { key: 'm', color: palette.sex[1], label: '♂' },
+      { key: 'f', color: palette.sex[2], label: '♀' },
+      { key: 'p', color: palette.sex[3], label: 'P' },
+      { key: 's', color: palette.special, label: '3性の子', dash: [4, 3] },
+    ];
+    cctx.lineWidth = 2;
+    cctx.lineJoin = 'round';
+    for (const s of series) {
+      cctx.strokeStyle = s.color;
+      cctx.setLineDash(s.dash || []);
+      cctx.beginPath();
+      history.forEach((d, k) => {
+        const x = xOf(d.gen);
+        const y = yOf(d[s.key]);
+        if (k === 0) cctx.moveTo(x, y); else cctx.lineTo(x, y);
+      });
+      cctx.stroke();
+    }
+    cctx.setLineDash([]);
+
+    // 線の右端に名前を添える（重ならないようにずらす）
+    const last = history[history.length - 1];
+    const endX = xOf(last.gen);
+    const labels = series
+      .map((s) => ({ ...s, y: yOf(last[s.key]) }))
+      .sort((a, b) => a.y - b.y);
+    for (let k = 1; k < labels.length; k++) {
+      if (labels[k].y - labels[k - 1].y < 13) labels[k].y = labels[k - 1].y + 13;
+    }
+    const overflow = labels[labels.length - 1].y - (chartPad.top + plotH);
+    if (overflow > 0) labels.forEach((l) => { l.y -= overflow; });
+    cctx.textAlign = 'left';
+    cctx.textBaseline = 'middle';
+    cctx.font = '11px system-ui, sans-serif';
+    for (const l of labels) {
+      cctx.fillStyle = l.color;
+      cctx.beginPath();
+      cctx.arc(endX + 8, l.y, 3, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.fillStyle = palette.text2;
+      cctx.fillText(l.label, endX + 14, l.y);
+    }
+
+    // マウスを重ねたときの縦線と点
+    if (hoverIndex >= 0) {
+      const d = history[hoverIndex];
+      const x = Math.round(xOf(d.gen)) + 0.5;
+      cctx.strokeStyle = palette.axis;
+      cctx.lineWidth = 1;
+      cctx.beginPath();
+      cctx.moveTo(x, chartPad.top);
+      cctx.lineTo(x, chartPad.top + plotH);
+      cctx.stroke();
+      for (const s of series) {
+        cctx.fillStyle = s.color;
+        cctx.strokeStyle = palette.panel;
+        cctx.lineWidth = 2;
+        cctx.beginPath();
+        cctx.arc(x, yOf(d[s.key]), 4, 0, Math.PI * 2);
+        cctx.fill();
+        cctx.stroke();
+      }
+    }
+  }
+
+  let hoverIndex = -1;
+
+  function showTooltip(e) {
+    if (!chartGeom || history.length === 0) return;
+    const rect = chartCanvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const gen = chartGeom.firstGen + ((mx - chartPad.left) / chartGeom.plotW) * chartGeom.span;
+    const lastGen = history[history.length - 1].gen;
+    if (gen < chartGeom.firstGen - 5 || gen > lastGen + 5) { hideTooltip(); return; }
+    hoverIndex = Math.max(0, Math.min(history.length - 1, Math.round(gen - chartGeom.firstGen)));
+    const d = history[hoverIndex];
+    const row = (color, name, value, dashed) =>
+      `<div><i class="swatch${dashed ? ' special' : ''}" style="background:${color}"></i>${name} <b>${value.toLocaleString()}</b></div>`;
+    tooltip.innerHTML =
+      `<div><b>${d.gen.toLocaleString()} 世代</b></div>` +
+      row(palette.sex[1], SEX_NAMES[1], d.m) +
+      row(palette.sex[2], SEX_NAMES[2], d.f) +
+      row(palette.sex[3], SEX_NAMES[3], d.p) +
+      row(palette.special, '3性の子', d.s, true);
+    tooltip.hidden = false;
+    const x = chartGeom.xOf(d.gen);
+    const tw = tooltip.offsetWidth;
+    tooltip.style.left = (x + 12 + tw > rect.width ? x - 12 - tw : x + 12) + 'px';
+    tooltip.style.top = '8px';
+    drawChart(hoverIndex);
+  }
+
+  function hideTooltip() {
+    hoverIndex = -1;
+    tooltip.hidden = true;
+    drawChart();
+  }
+
+  chartCanvas.addEventListener('pointermove', showTooltip);
+  chartCanvas.addEventListener('pointerleave', hideTooltip);
+
+  function draw() {
+    drawBoard();
+    drawChart(hoverIndex);
+    const d = history[history.length - 1];
+    el('gen').textContent = generation.toLocaleString();
+    el('countM').textContent = d.m.toLocaleString();
+    el('countF').textContent = d.f.toLocaleString();
+    el('countP').textContent = d.p.toLocaleString();
+    el('countS').textContent = d.s.toLocaleString();
+    el('bornTriple').textContent = bornTriple.toLocaleString();
+    el('bornPair').textContent = bornPair.toLocaleString();
+  }
+
+  // ---------- 操作 ----------
+
+  function loop(time) {
+    if (!running) return;
+    if (time - lastTick >= 1000 / Number(speedInput.value)) {
+      lastTick = time;
+      step();
+      draw();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function setRunning(value) {
+    running = value;
+    playBtn.textContent = running ? '停止' : '開始';
+    if (running) {
+      lastTick = 0;
+      requestAnimationFrame(loop);
+    }
+  }
+
+  playBtn.addEventListener('click', () => setRunning(!running));
+  el('step').addEventListener('click', () => {
+    setRunning(false);
+    step();
+    draw();
+  });
+  el('restart').addEventListener('click', createWorld);
+  el('newWorld').addEventListener('click', () => {
+    seed = Math.floor(Math.random() * 2 ** 31);
+    createWorld();
+  });
+
+  // 設定を変えたら同じ初期配置でやり直す
+  document.querySelectorAll('input[name="power"], #inherit, #childRule, #density')
+    .forEach((input) => input.addEventListener('change', createWorld));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && e.target === document.body) {
+      e.preventDefault();
+      setRunning(!running);
+    }
+  });
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    readPalette();
+    draw();
+  });
+  window.addEventListener('resize', resize);
+
+  readPalette();
+  createWorld();
+  resize();
+})();
+</script>
+</body>
+</html>
