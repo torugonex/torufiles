@@ -245,6 +245,7 @@
       </label>
     </div>
     <p class="hint">設定を変えると、同じ初期配置で最初からやり直します。力の違いを見比べるときに便利です。</p>
+    <p class="hint" style="margin-top:8px"><a id="rulesLink" href="rules.html" style="color:var(--accent)">ルール図鑑で、1マスずつ次の世代がどうなるかを確かめる →</a></p>
   </section>
 
   <div class="controls">
@@ -369,6 +370,8 @@
 
   function createWorld() {
     readSettings();
+    const q = new URLSearchParams({ power: settings.power, child: settings.childRule, inherit: settings.inherit ? '1' : '0' });
+    el('rulesLink').href = `rules.html?${q}`;
     rnd = mulberry32(seed);
     for (let i = 0; i < N; i++) {
       sex[i] = rnd() < settings.density ? 1 + Math.floor(rnd() * 3) : 0;

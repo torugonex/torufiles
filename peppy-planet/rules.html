@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ペピーの星 ルール図鑑</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f9f9f7;
+    --panel: #fcfcfb;
+    --text: #0b0b0b;
+    --text-2: #52514e;
+    --muted: #898781;
+    --border: rgba(11, 11, 11, 0.12);
+    --empty: #f0efec;
+    --male: #2a78d6;
+    --female: #eb6834;
+    --peppy: #1baf7a;
+    --chip: #ffffff;
+    --accent: #2a78d6;
+    --accent-text: #ffffff;
+    --select: #0b0b0b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --bg: #0d0d0d;
+      --panel: #1a1a19;
+      --text: #ffffff;
+      --text-2: #c3c2b7;
+      --muted: #898781;
+      --border: rgba(255, 255, 255, 0.12);
+      --empty: #262624;
+      --male: #3987e5;
+      --female: #d95926;
+      --peppy: #199e70;
+      --chip: #ffffff;
+      --accent: #3987e5;
+      --accent-text: #ffffff;
+      --select: #ffffff;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --panel: #1a1a19;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --muted: #898781;
+    --border: rgba(255, 255, 255, 0.12);
+    --empty: #262624;
+    --male: #3987e5;
+    --female: #d95926;
+    --peppy: #199e70;
+    --chip: #ffffff;
+    --accent: #3987e5;
+    --accent-text: #ffffff;
+    --select: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+  a { color: var(--accent); }
+  .back { font-size: 0.85rem; }
+  h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  .lead { color: var(--text-2); margin: 0 0 20px; font-size: 0.9rem; line-height: 1.6; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .settings {
+    display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center;
+    font-size: 0.9rem;
+  }
+  .settings label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .settings select { max-width: 100%; }
+  button, select {
+    font: inherit; font-size: 0.9rem;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover, select:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; font-size: 0.9rem; }
+  .toolbar .sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
+  .tool[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
+  .tool .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+
+  .workspace { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .workspace { grid-template-columns: 1fr; } }
+
+  /* セルの共通表現 */
+  .c {
+    position: relative;
+    display: grid; place-items: center;
+    aspect-ratio: 1;
+    border-radius: 3px;
+    background: var(--empty);
+    color: #fff;
+    font-weight: 700;
+    line-height: 1;
+    user-select: none;
+  }
+  .c.s1 { background: var(--male); }
+  .c.s2 { background: var(--female); }
+  .c.s3 { background: var(--peppy); }
+  /* 3性の子：記号を白いチップに載せる（星全体の盤面の「白い印」を拡大したもの） */
+  .c .chip {
+    display: grid; place-items: center;
+    width: 62%; height: 62%;
+    border-radius: 3px;
+    background: var(--chip);
+  }
+  .c.s1 .chip { color: var(--male); }
+  .c.s2 .chip { color: var(--female); }
+  .c.s3 .chip { color: var(--peppy); }
+
+  .board {
+    display: grid;
+    gap: 2px;
+    touch-action: none;
+    font-size: clamp(10px, 2.2vw, 16px);
+  }
+  .board .c { cursor: pointer; }
+  .board .c.nb { box-shadow: 0 0 0 2px var(--muted); }
+  .board .c.sel { box-shadow: 0 0 0 3px var(--select); z-index: 1; }
+  /* 予告：死ぬマス */
+  .board.preview .c.die::after {
+    content: "";
+    position: absolute; inset: 18%;
+    background:
+      linear-gradient(45deg, transparent 43%, var(--panel) 43%, var(--panel) 57%, transparent 57%),
+      linear-gradient(-45deg, transparent 43%, var(--panel) 43%, var(--panel) 57%, transparent 57%);
+    opacity: 0.9;
+  }
+  /* 予告：生まれるマス */
+  .board.preview .c.born {
+    background: var(--empty);
+    outline: 2px dashed var(--pc);
+    outline-offset: -3px;
+    color: var(--pc);
+  }
+  .board.preview .c.born .ghost { opacity: 0.85; }
+  .board.preview .c.born .chip { background: transparent; border: 2px solid var(--pc); width: 56%; height: 56%; }
+  .c .ghost { display: none; }
+  .board.preview .c .ghost { display: grid; place-items: center; width: 100%; height: 100%; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.8rem; color: var(--text-2); margin-top: 10px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend .c { width: 18px; font-size: 10px; }
+  .summary { font-size: 0.85rem; color: var(--text-2); margin: 10px 0 0; min-height: 1.4em; }
+
+  /* 説明パネル */
+  .explain .scene { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: 132px; font-size: 16px; }
+  .grid3 .c.center { box-shadow: 0 0 0 3px var(--select); }
+  .arrow { font-size: 1.4rem; color: var(--muted); }
+  .outcomes { display: flex; gap: 8px; }
+  .outcome { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-2); }
+  .outcome .c { width: 42px; font-size: 16px; }
+  .outcome.chosen .c { box-shadow: 0 0 0 3px var(--select); }
+  .verdict { font-weight: 600; margin: 0 0 8px; }
+  .steps { margin: 0; padding-left: 20px; font-size: 0.88rem; line-height: 1.7; color: var(--text-2); }
+  .steps .power { color: var(--text); font-weight: 600; }
+  .placeholder { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+  /* 見本帳 */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .sample {
+    text-align: left;
+    padding: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .sample .row { display: flex; align-items: center; gap: 8px; }
+  .sample .grid3 { width: 72px; gap: 2px; font-size: 9px; }
+  .sample .grid3 .c.center { box-shadow: 0 0 0 2px var(--select); }
+  .sample .outcomes { gap: 4px; }
+  .sample .outcome .c { width: 24px; font-size: 10px; }
+  .sample .outcome { font-size: 0.7rem; }
+  .sample .title { font-size: 0.8rem; color: var(--text-2); }
+  .sample .result { font-size: 0.85rem; font-weight: 600; }
+  h3 { font-size: 0.95rem; margin: 18px 0 10px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" id="backLink" href="index.html">← 星全体のようすに戻る</a>
+  <h1>ペピーの星 ルール図鑑</h1>
+  <p class="lead">
+    1つのマスが次の世代でどうなるかは、周りの8マスだけで決まります。
+    小さな世界に生き物を置くと、次の世代の予告が表示されます。マスを選ぶと、そうなる理由が順を追って分かります。
+  </p>
+
+  <section class="card">
+    <div class="settings">
+      <label>3性の子の力
+        <select id="power">
+          <option value="none">力なし</option>
+          <option value="longevity">長寿（周り4匹まで耐える）</option>
+          <option value="guardian">守護（隣の仲間は1匹でも生きる）</option>
+          <option value="fertility" selected>多産（隣の空きマスは2〜4匹で誕生）</option>
+          <option value="wildcard">万能（足りない性の代わりになる）</option>
+        </select>
+      </label>
+      <label>2性の交配で生まれる子
+        <select id="childRule">
+          <option value="missing">両親にいない性</option>
+          <option value="majority">周りに多い方の性</option>
+          <option value="random">両親のどちらかの性</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="inherit"> 力が子に受け継がれる</label>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="world-title">
+    <h2 id="world-title">小さな世界で1世代ずつ</h2>
+    <div class="workspace">
+      <div>
+        <div class="toolbar" role="toolbar" aria-label="置くもの">
+          <button class="tool" data-tool="1"><i class="dot" style="background:var(--male)"></i>♂</button>
+          <button class="tool" data-tool="2"><i class="dot" style="background:var(--female)"></i>♀</button>
+          <button class="tool" data-tool="3"><i class="dot" style="background:var(--peppy)"></i>P</button>
+          <button class="tool" data-tool="0">消す</button>
+          <button class="tool" data-tool="inspect">調べる</button>
+          <label><input type="checkbox" id="placeSpecial"> 3性の子として置く</label>
+        </div>
+        <div class="board preview" id="board" aria-label="小さな世界の盤面"></div>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="primary" id="step">1世代進める</button>
+          <button id="undo" disabled>1つ戻る</button>
+          <button id="random">ランダムに置く</button>
+          <button id="clear">クリア</button>
+          <label><input type="checkbox" id="showPreview" checked> 次の世代の予告</label>
+        </div>
+        <div class="legend">
+          <span><i class="c s1">♂</i>male</span>
+          <span><i class="c s2">♀</i>female</span>
+          <span><i class="c s3">P</i>peppy</span>
+          <span><i class="c s1"><b class="chip">♂</b></i>3性の子</span>
+          <span><i class="c born-legend" style="background:var(--empty);outline:2px dashed var(--muted);outline-offset:-3px"></i>次に生まれる</span>
+          <span><i class="c s2 die-legend" style="color:var(--panel)">✕</i>次に死ぬ</span>
+        </div>
+        <p class="summary" id="summary"></p>
+        <p class="placeholder" style="font-size:0.8rem;margin:6px 0 0">この小さな世界では、盤面の外は空きマスとして数えます（星全体の盤面は端が反対側とつながっています）。</p>
+      </div>
+      <div class="explain" id="explain" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="gallery-title">
+    <h2 id="gallery-title">ルール見本帳</h2>
+    <p class="placeholder" style="margin-top:-4px">代表的な配置と、その次の世代です。選んでいる設定で結果が変わります。カードを押すと、上の小さな世界に置いて確かめられます。</p>
+    <div class="gallery" id="gallery"></div>
+    <div id="powerGalleryWrap">
+      <h3 id="powerGalleryTitle"></h3>
+      <div class="gallery" id="powerGallery"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const COLS = 14;
+  const ROWS = 10;
+  const SYMBOL = ['', '♂', '♀', 'P'];
+  const COLOR_VAR = ['', 'var(--male)', 'var(--female)', 'var(--peppy)'];
+  const POWER_NAME = { none: '力なし', longevity: '長寿', guardian: '守護', fertility: '多産', wildcard: '万能' };
+  const el = (id) => document.getElementById(id);
+
+  // ---------- ルール（index.html の step() と同じ判定を、理由つきで行う） ----------
+
+  function settings() {
+    return { power: el('power').value, childRule: el('childRule').value, inherit: el('inherit').checked };
+  }
+
+  const nameOf = (c) => (c.sp ? `3性の子の${SYMBOL[c.sex]}` : SYMBOL[c.sex]);
+  const sexList = (counts) => [1, 2, 3].filter((s) => counts[s]).map((s) => SYMBOL[s]).join('と');
+  const frac = (p) => (p === 1 ? '' : p === 0.5 ? '1/2' : Math.abs(p - 1 / 3) < 1e-9 ? '1/3' : Math.abs(p - 2 / 3) < 1e-9 ? '2/3' : p === 0.25 ? '1/4' : `${Math.round(p * 100)}%`);
+
+  // center: {sex, sp} / nbs: 周り8マスの {sex, sp}
+  function judge(center, nbs, S) {
+    let n = 0, sp = 0;
+    const real = [0, 0, 0, 0];
+    const plain = [0, 0, 0, 0];
+    for (const c of nbs) {
+      if (!c.sex) continue;
+      n++;
+      real[c.sex]++;
+      if (c.sp) sp++; else plain[c.sex]++;
+    }
+    const breakdown = [1, 2, 3].filter((s) => real[s]).map((s) => `${SYMBOL[s]}${real[s]}`).join('・');
+    const desc = n === 0 ? '0匹' : `${n}匹（${breakdown}${sp ? `、うち3性の子${sp}匹` : ''}）`;
+    const steps = [];
+    const power = (text) => steps.push({ text, power: true });
+    const say = (text) => steps.push({ text });
+
+    if (center.sex) {
+      say(`${nameOf(center)}が住んでいます。周りの生き物は${desc}。`);
+      let lo = 2, hi = 3;
+      if (S.power === 'longevity' && center.sp) { hi = 4; power('長寿の力：このマスは3性の子なので、周りが4匹まで耐えられます。'); }
+      if (S.power === 'guardian' && sp > 0) { lo = 1; power('守護の力：隣に3性の子がいるので、周りが1匹でも生き残れます。'); }
+      say(`生き残れるのは、周りが${lo}〜${hi}匹のときです。`);
+      if (n < lo) return { kind: 'lonely', verdict: '孤独（過疎）で死にます', steps, outcomes: [{ sex: 0, sp: 0, p: 1 }] };
+      if (n > hi) return { kind: 'crowded', verdict: '混み合い（過密）で死にます', steps, outcomes: [{ sex: 0, sp: 0, p: 1 }] };
+      return { kind: 'survive', verdict: '生き残ります', steps, outcomes: [{ sex: center.sex, sp: center.sp, p: 1 }] };
+    }
+
+    say(`空きマスです。周りの生き物は${desc}。`);
+    const fertile = S.power === 'fertility' && sp > 0;
+    if (fertile) power('多産の力：隣に3性の子がいるので、周りが2〜4匹でも誕生できます。');
+    const canBirth = n === 3 || (fertile && (n === 2 || n === 4));
+    const empty = [{ sex: 0, sp: 0, p: 1 }];
+    if (!canBirth) {
+      const need = fertile ? '2〜4匹' : 'ちょうど3匹';
+      return { kind: 'none', verdict: '空きのままです', steps: [...steps, { text: `誕生には周りに${need}必要ですが、今は${n}匹です。` }], outcomes: empty };
+    }
+
+    let kinds = (real[1] > 0) + (real[2] > 0) + (real[3] > 0);
+    if (S.power === 'wildcard') {
+      const wild = Math.min(3, (plain[1] > 0) + (plain[2] > 0) + (plain[3] > 0) + sp);
+      if (wild > kinds) power(`万能の力：3性の子が足りない性の代わりになり、性は${wild}種類あるとみなされます。`);
+      kinds = wild;
+    }
+    if (kinds < 2) {
+      say(`周りの性が${sexList(real)}の1種類だけなので、交配できません。`);
+      return { kind: 'same', verdict: '空きのままです', steps, outcomes: empty };
+    }
+    if (kinds === 3) {
+      say('♂・♀・Pの3つの性がそろいました。3性の交配です！');
+      say('生まれる子は3性の子で、性は3つのうちどれかがランダムに決まります。');
+      return {
+        kind: 'triple', verdict: '3性の子が生まれます', steps,
+        outcomes: [1, 2, 3].map((s) => ({ sex: s, sp: 1, p: 1 / 3 })),
+      };
+    }
+
+    say(`周りの性は${sexList(real)}の2種類。2性の交配です。`);
+    let probs = [0, 0, 0, 0];
+    if (S.childRule === 'missing') {
+      const missing = [1, 2, 3].filter((s) => !real[s]);
+      missing.forEach((s) => { probs[s] = 1 / missing.length; });
+      say(`子は両親にいない性になります：${missing.map((s) => SYMBOL[s]).join('か')}${missing.length > 1 ? '（どちらかランダム）' : ''}。`);
+    } else if (S.childRule === 'majority') {
+      const most = Math.max(real[1], real[2], real[3]);
+      const top = [1, 2, 3].filter((s) => real[s] === most);
+      top.forEach((s) => { probs[s] = 1 / top.length; });
+      say(`子は周りに多い方の性になります：${top.map((s) => SYMBOL[s]).join('か')}${top.length > 1 ? '（同数なのでどちらかランダム）' : ''}。`);
+    } else {
+      [1, 2, 3].forEach((s) => { probs[s] = real[s] / n; });
+      say('子は周りの1匹を親に選び、その性を受け継ぎます（数が多い性ほど選ばれやすい）。');
+    }
+    let outcomes = [1, 2, 3].filter((s) => probs[s] > 0).map((s) => ({ sex: s, sp: 0, p: probs[s] }));
+    if (S.inherit && sp > 0) {
+      power('力の継承：親に3性の子がいるので、50%の確率で3性の子になります。');
+      outcomes = outcomes.flatMap((o) => [{ ...o, p: o.p / 2 }, { ...o, sp: 1, p: o.p / 2 }]);
+    }
+    return { kind: 'pair', verdict: '普通の子が生まれます', steps, outcomes };
+  }
+
+  function sample(outcomes) {
+    let r = Math.random();
+    for (const o of outcomes) { if ((r -= o.p) < 0) return o; }
+    return outcomes[outcomes.length - 1];
+  }
+
+  // ---------- セルの見た目 ----------
+
+  function cellHTML(sex, sp, extraClass = '') {
+    const sym = SYMBOL[sex];
+    const inner = sex ? (sp ? `<b class="chip">${sym}</b>` : sym) : '';
+    return `<i class="c s${sex} ${extraClass}">${inner}</i>`;
+  }
+
+  function sceneHTML(center, nbs, result, chosen) {
+    const cells = [];
+    for (let k = 0, j = 0; k < 9; k++) {
+      if (k === 4) cells.push(cellHTML(center.sex, center.sp, 'center'));
+      else { const c = nbs[j++]; cells.push(cellHTML(c.sex, c.sp)); }
+    }
+    const outs = result.outcomes.map((o) => {
+      const isChosen = chosen && o.sex === chosen.sex && o.sp === chosen.sp && result.outcomes.length > 1;
+      return `<div class="outcome${isChosen ? ' chosen' : ''}">${cellHTML(o.sex, o.sp)}<span>${frac(o.p)}${isChosen ? ' 今回' : ''}</span></div>`;
+    }).join('');
+    return `<div class="grid3">${cells.join('')}</div><span class="arrow" aria-hidden="true">→</span><div class="outcomes">${outs}</div>`;
+  }
+
+  // ---------- 小さな世界 ----------
+
+  let sex = new Uint8Array(COLS * ROWS);
+  let sp = new Uint8Array(COLS * ROWS);
+  let plan = [];          // 各マスの次の世代（予告と実際の進行で同じものを使う）
+  let undoStack = [];
+  let selected = -1;
+  let tool = '1';
+  let lastSummary = '';
+
+  const boardEl = el('board');
+  boardEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+  for (let i = 0; i < COLS * ROWS; i++) {
+    const d = document.createElement('div');
+    d.dataset.i = i;
+    boardEl.appendChild(d);
+  }
+
+  // この小さな世界では、盤面の外は空きとして扱う
+  function neighbours(i) {
+    const x = i % COLS, y = Math.floor(i / COLS);
+    const list = [];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx, ny = y + dy;
+        const inside = nx >= 0 && ny >= 0 && nx < COLS && ny < ROWS;
+        list.push(inside ? ny * COLS + nx : -1);
+      }
+    }
+    return list;
+  }
+  const cellAt = (j) => (j < 0 ? { sex: 0, sp: 0 } : { sex: sex[j], sp: sp[j] });
+
+  function makePlan() {
+    const S = settings();
+    plan = [];
+    for (let i = 0; i < COLS * ROWS; i++) {
+      const result = judge(cellAt(i), neighbours(i).map(cellAt), S);
+      plan.push({ result, next: sample(result.outcomes) });
+    }
+  }
+
+  function render() {
+    const nbSet = new Set(selected >= 0 ? neighbours(selected).filter((j) => j >= 0) : []);
+    boardEl.classList.toggle('preview', el('showPreview').checked);
+    for (let i = 0; i < COLS * ROWS; i++) {
+      const d = boardEl.children[i];
+      const { next } = plan[i];
+      const classes = ['c', `s${sex[i]}`];
+      let inner = sex[i] ? (sp[i] ? `<b class="chip">${SYMBOL[sex[i]]}</b>` : SYMBOL[sex[i]]) : '';
+      d.style.removeProperty('--pc');
+      if (sex[i] && !next.sex) classes.push('die');
+      if (!sex[i] && next.sex) {
+        classes.push('born');
+        d.style.setProperty('--pc', COLOR_VAR[next.sex]);
+        const sym = SYMBOL[next.sex];
+        inner = `<span class="ghost">${next.sp ? `<b class="chip">${sym}</b>` : sym}</span>`;
+      }
+      if (i === selected) classes.push('sel');
+      else if (nbSet.has(i)) classes.push('nb');
+      d.className = classes.join(' ');
+      d.innerHTML = inner;
+      d.setAttribute('aria-label', `${(i % COLS) + 1}列${Math.floor(i / COLS) + 1}行`);
+    }
+    el('undo').disabled = undoStack.length === 0;
+    el('summary').textContent = lastSummary;
+    renderExplain();
+  }
+
+  function renderExplain() {
+    const box = el('explain');
+    if (selected < 0) {
+      box.innerHTML = '<p class="placeholder">盤面のマスを選ぶと、そのマスが次の世代でどうなるか、理由と一緒にここに表示します。<br>「調べる」を選ぶと、盤面を変えずにマスを選べます。</p>';
+      return;
+    }
+    const { result, next } = plan[selected];
+    const center = cellAt(selected);
+    const nbs = neighbours(selected).map(cellAt);
+    const x = (selected % COLS) + 1, y = Math.floor(selected / COLS) + 1;
+    box.innerHTML =
+      `<h2 style="margin-bottom:8px">${x}列${y}行のマス</h2>` +
+      `<div class="scene">${sceneHTML(center, nbs, result, next)}</div>` +
+      `<p class="verdict">${result.verdict}</p>` +
+      `<ol class="steps">${result.steps.map((s) => `<li${s.power ? ' class="power"' : ''}>${s.text}</li>`).join('')}</ol>`;
+  }
+
+  function changed() {
+    makePlan();
+    lastSummary = '';
+    render();
+  }
+
+  function paint(i) {
+    if (tool === 'inspect') return false;
+    const v = Number(tool);
+    const special = v && el('placeSpecial').checked ? 1 : 0;
+    if (sex[i] === v && sp[i] === special) return false;
+    sex[i] = v;
+    sp[i] = special;
+    return true;
+  }
+
+  let dragging = false;
+  boardEl.addEventListener('pointerdown', (e) => {
+    const t = e.target.closest('[data-i]');
+    if (!t) return;
+    dragging = true;
+    boardEl.setPointerCapture(e.pointerId);
+    const i = Number(t.dataset.i);
+    selected = i;
+    // 1回のドラッグ全体を「1つ戻る」1回分にするため、描き始める前の状態を控える
+    const before = snapshot();
+    if (paint(i)) pushUndo(before);
+    changed();
+  });
+  boardEl.addEventListener('pointermove', (e) => {
+    if (!dragging || tool === 'inspect') return;
+    const t = document.elementFromPoint(e.clientX, e.clientY)?.closest('#board [data-i]');
+    if (!t) return;
+    const i = Number(t.dataset.i);
+    if (paint(i)) { selected = i; changed(); }
+  });
+  const endDrag = () => { dragging = false; };
+  boardEl.addEventListener('pointerup', endDrag);
+  boardEl.addEventListener('pointercancel', endDrag);
+
+  function snapshot() {
+    return { sex: sex.slice(), sp: sp.slice(), summary: lastSummary };
+  }
+  function pushUndo(state = snapshot()) {
+    undoStack.push(state);
+    if (undoStack.length > 100) undoStack.shift();
+  }
+
+  function step() {
+    pushUndo();
+    const tally = { triple: 0, pair: 0, lonely: 0, crowded: 0, survive: 0 };
+    const nextSex = new Uint8Array(COLS * ROWS);
+    const nextSp = new Uint8Array(COLS * ROWS);
+    plan.forEach(({ result, next }, i) => {
+      nextSex[i] = next.sex;
+      nextSp[i] = next.sp;
+      if (result.kind in tally) tally[result.kind]++;
+    });
+    sex = nextSex;
+    sp = nextSp;
+    makePlan();
+    lastSummary = `前の世代からの変化：誕生 ${tally.triple + tally.pair}（3性の交配 ${tally.triple}・2性の交配 ${tally.pair}）、` +
+      `死亡 ${tally.lonely + tally.crowded}（過疎 ${tally.lonely}・過密 ${tally.crowded}）、生き残り ${tally.survive}`;
+    render();
+  }
+
+  function undo() {
+    const prev = undoStack.pop();
+    if (!prev) return;
+    sex = prev.sex;
+    sp = prev.sp;
+    makePlan();
+    lastSummary = prev.summary;
+    render();
+  }
+
+  function setTool(t) {
+    tool = t;
+    document.querySelectorAll('.tool').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === t)));
+  }
+  document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+  el('step').addEventListener('click', step);
+  el('undo').addEventListener('click', undo);
+  el('clear').addEventListener('click', () => {
+    pushUndo();
+    sex.fill(0); sp.fill(0);
+    changed();
+  });
+  el('random').addEventListener('click', () => {
+    pushUndo();
+    for (let i = 0; i < COLS * ROWS; i++) {
+      sex[i] = Math.random() < 0.3 ? 1 + Math.floor(Math.random() * 3) : 0;
+      sp[i] = sex[i] && Math.random() < 0.15 ? 1 : 0;
+    }
+    changed();
+  });
+  el('showPreview').addEventListener('change', render);
+  ['power', 'childRule', 'inherit'].forEach((id) => el(id).addEventListener('change', () => {
+    makePlan();
+    render();
+    renderGallery();
+  }));
+
+  // ---------- 見本帳 ----------
+  // 3x3の配置を "上段/中段/下段" で書く。. =空き, M F P =普通, m f p =3性の子
+
+  const BASIC = [
+    { title: '住人＋周りに2匹', layout: 'M.F/.M./...' },
+    { title: '住人＋周りに1匹だけ', layout: '..F/.M./...' },
+    { title: '住人＋周りに4匹', layout: 'MFP/.M./P..' },
+    { title: '空きマス＋♂・♀・P', layout: 'M.F/.../.P.' },
+    { title: '空きマス＋♂・♂・♀', layout: 'M.F/.../.M.' },
+    { title: '空きマス＋♀・P・P', layout: 'F.P/.../.P.' },
+    { title: '空きマス＋同じ性だけ（♂×3）', layout: 'M.M/.../.M.' },
+    { title: '空きマス＋周りに2匹', layout: 'M.F/.../...' },
+  ];
+  const POWER_SAMPLES = {
+    longevity: [
+      { title: '3性の子＋周りに4匹', layout: 'MFP/.m./P..' },
+      { title: '普通の住人＋周りに4匹', layout: 'MFP/.M./P..' },
+    ],
+    guardian: [
+      { title: '住人＋隣に3性の子が1匹だけ', layout: 'm../.F./...' },
+      { title: '住人＋隣に普通の1匹だけ', layout: 'M../.F./...' },
+    ],
+    fertility: [
+      { title: '空きマス＋3性の子と♀（2匹）', layout: 'm.F/.../...' },
+      { title: '空きマス＋3性の子を含む4匹', layout: 'm.F/.../P.M' },
+      { title: '空きマス＋普通の♂と♀（2匹）', layout: 'M.F/.../...' },
+    ],
+    wildcard: [
+      { title: '空きマス＋♂・♀＋3性の子の♂', layout: 'm.F/.../.M.' },
+      { title: '空きマス＋♂・♂＋3性の子の♂', layout: 'm.M/.../.M.' },
+    ],
+  };
+  const INHERIT_SAMPLE = { title: '空きマス＋♀・♀＋3性の子の♂', layout: 'm.F/.../.F.' };
+
+  function parseLayout(layout) {
+    const chars = layout.replace(/\//g, '');
+    const cells = [...chars].map((ch) => {
+      const s = { '.': 0, M: 1, F: 2, P: 3, m: 1, f: 2, p: 3 }[ch];
+      return { sex: s, sp: ch !== '.' && ch === ch.toLowerCase() ? 1 : 0 };
+    });
+    return { center: cells[4], nbs: cells.filter((_, k) => k !== 4) };
+  }
+
+  function sampleCard(item) {
+    const { center, nbs } = parseLayout(item.layout);
+    const result = judge(center, nbs, settings());
+    const btn = document.createElement('button');
+    btn.className = 'sample';
+    btn.innerHTML =
+      `<span class="title">${item.title}</span>` +
+      `<span class="row">${sceneHTML(center, nbs, result, null)}</span>` +
+      `<span class="result">${result.verdict}</span>`;
+    btn.addEventListener('click', () => loadSample(item.layout));
+    return btn;
+  }
+
+  function renderGallery() {
+    const S = settings();
+    const g = el('gallery');
+    g.replaceChildren(...BASIC.map(sampleCard));
+    const extra = [...(POWER_SAMPLES[S.power] || [])];
+    if (S.inherit) extra.push(INHERIT_SAMPLE);
+    el('powerGalleryWrap').hidden = extra.length === 0;
+    el('powerGalleryTitle').textContent = S.power === 'none'
+      ? '力の継承の見本'
+      : `「${POWER_NAME[S.power]}」の力の見本${S.inherit ? '（と力の継承）' : ''}`;
+    el('powerGallery').replaceChildren(...extra.map(sampleCard));
+  }
+
+  function loadSample(layout) {
+    pushUndo();
+    sex.fill(0); sp.fill(0);
+    const { center, nbs } = parseLayout(layout);
+    const cx = Math.floor(COLS / 2), cy = Math.floor(ROWS / 2);
+    const all = [...nbs.slice(0, 4), center, ...nbs.slice(4)];
+    all.forEach((c, k) => {
+      const i = (cy - 1 + Math.floor(k / 3)) * COLS + (cx - 1 + (k % 3));
+      sex[i] = c.sex;
+      sp[i] = c.sp;
+    });
+    selected = cy * COLS + cx;
+    setTool('inspect');
+    changed();
+    el('world-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // 星全体のページから設定を引き継ぐ（?power=...&child=...&inherit=1）
+  const params = new URLSearchParams(location.search);
+  if (params.has('power') && POWER_NAME[params.get('power')]) el('power').value = params.get('power');
+  if (['missing', 'majority', 'random'].includes(params.get('child'))) el('childRule').value = params.get('child');
+  if (params.get('inherit') === '1') el('inherit').checked = true;
+
+  setTool('1');
+  loadSample('M.F/.../.P.');
+  undoStack = [];
+  setTool('1');
+  renderGallery();
+  render();
+})();
+</script>
+</body>
+</html>
