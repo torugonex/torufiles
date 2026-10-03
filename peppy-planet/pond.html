@@ -95,6 +95,8 @@
   .settings { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; font-size: 0.9rem; margin-bottom: 12px; }
   .settings label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   .settings select { max-width: 100%; }
+  #sound[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
+  .controls label { display: flex; align-items: center; gap: 6px; }
   .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 0.9rem; }
   button, select {
     font: inherit; font-size: 0.9rem;
@@ -197,6 +199,11 @@
     <button id="restart">同じ池でやり直す</button>
     <button id="newPond">新しい池をつくる</button>
   </div>
+  <div class="controls">
+    <button id="sound" aria-pressed="false">♪ 音を出す</button>
+    <label>音量 <input type="range" id="volume" min="0" max="100" value="60"></label>
+    <label><input type="checkbox" id="pad" checked> 背景の和音</label>
+  </div>
 
   <div class="stats">
     <div class="stat"><div class="label">経過時間</div><div class="value" id="time">0:00</div></div>
@@ -233,6 +240,18 @@
       <li><b>体力</b>：交配すると親は体力を使い、その体力が卵の体力になります。多産で卵が3つになると、1つあたりの体力は小さくなります。</li>
       <li><b>遺伝</b>：子は親の大きさ・速さ・体形・模様・色合いを混ぜて受け継ぎ、少しだけ変化（突然変異）します。速く泳ぐ子はえさや相手を見つけやすい代わりに、おなかが減りやすくなります。</li>
       <li><b>見分け方</b>：性は体の色と尾の形で分かります（♂は二股の尾、♀は丸い尾、Pは三つ葉の尾）。3性の子は金色に光り、体の真ん中に白い印があります。</li>
+    </ul>
+  </details>
+  <details>
+    <summary>音のしくみ</summary>
+    <ul>
+      <li><b>性ごとの音</b>：♂はド、♀はミ、Pはソの音を持っています。大きな生き物ほど低く、小さな生き物ほど高い音になります。</li>
+      <li><b>2性の交配</b>：両親の2つの音が鳴ります（ドとミ、ミとソ、ソとド）。</li>
+      <li><b>3性の交配</b>：ド・ミ・ソがそろい、和音が響きます。3つの性がそろったときだけ、和音が完成します。</li>
+      <li><b>ふ化と死</b>：卵がかえると小さく高い音、生き物が死ぬと低く沈んでいく音がします。新しい世代が初めて生まれると、鈴の音が鳴ります。</li>
+      <li><b>背景の和音</b>：ド・ミ・ソが静かに鳴り続け、それぞれの大きさは池にいるその性の数に合わせて変わります。3つの性のバランスが崩れると、和音の一部が弱まって聞こえます。</li>
+      <li><b>聞こえる方向</b>：池の左で起きたことは左から、右で起きたことは右から聞こえます。</li>
+      <li>速さが「はやい」以上のときは、音が鳴りすぎないように一部を間引きます。</li>
     </ul>
   </details>
 </main>
@@ -293,7 +312,13 @@ function createPond(opts, seed) {
     pond.creatures.push(c);
     return c;
   }
-  const say = (kind, text) => { pond.log.unshift({ t: pond.time, kind, text }); if (pond.log.length > 40) pond.log.pop(); };
+  const say = (kind, text) => {
+    pond.log.unshift({ t: pond.time, kind, text });
+    if (pond.log.length > 40) pond.log.pop();
+    if (kind === 'gen' && pond.onEvent) pond.onEvent({ kind: 'gen' });
+  };
+  // 見た目の効果を追加し、音の係（onEvent）にも知らせる
+  const emit = (e) => { pond.effects.push(e); if (pond.onEvent) pond.onEvent(e); };
 
   for (let i = 0; i < opts.count; i++) makeCreature({ sex: 1 + (i % 3) });
   for (let i = 0; i < 60; i++) pond.food.push({ x: rnd() * POND_W, y: rnd() * POND_H });
@@ -339,7 +364,7 @@ function createPond(opts, seed) {
       for (const p of parents) p.kids.push(egg.id);
     }
     for (const p of parents) { p.energy -= P.mateCost; p.cooldown = P.cooldown; p.children += eggs; }
-    pond.effects.push({ kind: trio ? 'trio' : 'pair', x: cx, y: cy, t: 0 });
+    emit({ kind: trio ? 'trio' : 'pair', x: cx, y: cy, t: 0, parents: parents.map((p) => ({ sex: p.sex, size: p.genes.size })) });
     if (trio) {
       pond.births.trio++;
       say('trio', `3性の交配！ ${parents.map((p) => '♂♀P'[p.sex - 1]).join('・')} から3性の子が生まれます`);
@@ -362,7 +387,7 @@ function createPond(opts, seed) {
       if (c.stage === 'egg') {
         c.eggTimer -= dt;
         c.vx *= 0.96; c.vy *= 0.96; c.x += c.vx * dt; c.y += c.vy * dt;
-        if (c.eggTimer <= 0) { c.stage = 'young'; c.age = 0; pond.effects.push({ kind: 'hatch', x: c.x, y: c.y, t: 0, sex: c.sex }); }
+        if (c.eggTimer <= 0) { c.stage = 'young'; c.age = 0; emit({ kind: 'hatch', x: c.x, y: c.y, t: 0, sex: c.sex }); }
         continue;
       }
       c.age += dt;
@@ -374,7 +399,7 @@ function createPond(opts, seed) {
       if (c.energy <= 0 || c.age >= c.lifespan) {
         c.dead = true;
         c.cause = c.energy <= 0 ? '飢え' : '寿命';
-        pond.effects.push({ kind: 'death', x: c.x, y: c.y, t: 0, sex: c.sex, size: c.genes.size });
+        emit({ kind: 'death', x: c.x, y: c.y, t: 0, sex: c.sex, size: c.genes.size });
         continue;
       }
 
@@ -443,7 +468,7 @@ function createPond(opts, seed) {
       for (const c of list) {
         if (!ready(c) || dist2(c, ct) > P.joinRadius ** 2 || !completesTrio(ct.members, c)) continue;
         ct.members.push(c); c.court = ct; ct.t = Math.min(ct.t, P.courtTime * 0.4);
-        pond.effects.push({ kind: 'join', x: ct.x, y: ct.y, t: 0 });
+        emit({ kind: 'join', x: ct.x, y: ct.y, t: 0 });
         break;
       }
     }
@@ -902,8 +927,162 @@ function createPond(opts, seed) {
       inherit: el('inherit').checked, count: Number(el('count').value),
     };
   }
+  // ---------- 音 ----------
+  const audio = (() => {
+    const TONE = [0, 261.63, 329.63, 392.0]; // ♂=ド, ♀=ミ, P=ソ
+    let ctx = null, master, wet, padOut;
+    const padGains = [];
+    let enabled = false;
+    let tokens = 8, lastRefill = 0, recentTrio = [], lastPad = 0;
+
+    const volume = () => (Number(el('volume').value) / 100) * 0.9;
+    const pitch = (sex, size = 1) => TONE[sex] * (size < 0.9 ? 2 : size > 1.12 ? 0.5 : 1);
+    const panOf = (x) => Math.max(-0.8, Math.min(0.8, (x / POND_W) * 1.6 - 0.8));
+
+    function init() {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain();
+      master.gain.value = volume();
+      const comp = ctx.createDynamicsCompressor();
+      master.connect(comp);
+      comp.connect(ctx.destination);
+      // 水の中のような残響（こだまのくり返し）
+      const delay = ctx.createDelay(1);
+      delay.delayTime.value = 0.27;
+      const feedback = ctx.createGain();
+      feedback.gain.value = 0.32;
+      const damp = ctx.createBiquadFilter();
+      damp.type = 'lowpass';
+      damp.frequency.value = 2200;
+      wet = ctx.createGain();
+      wet.gain.value = 0.35;
+      wet.connect(delay); delay.connect(damp); damp.connect(feedback); feedback.connect(delay); damp.connect(master);
+      // 背景の和音：ド・ミ・ソを1オクターブ下で鳴らし続ける
+      const padFilter = ctx.createBiquadFilter();
+      padFilter.type = 'lowpass';
+      padFilter.frequency.value = 700;
+      padOut = ctx.createGain();
+      padOut.gain.value = 0;
+      padFilter.connect(padOut);
+      padOut.connect(master);
+      for (let s = 1; s <= 3; s++) {
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        g.connect(padFilter);
+        for (const detune of [-4, 4]) {
+          const o = ctx.createOscillator();
+          o.type = 'sine';
+          o.frequency.value = TONE[s] / 2;
+          o.detune.value = detune;
+          o.connect(g);
+          o.start();
+        }
+        padGains[s] = g;
+      }
+    }
+
+    function voice(freq, when, dur, { type = 'triangle', gain = 0.15, pan = 0, glideTo = null } = {}) {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, when);
+      if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, when + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(gain, when + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      const p = ctx.createStereoPanner();
+      p.pan.value = pan;
+      o.connect(g); g.connect(p); p.connect(master); p.connect(wet);
+      o.start(when);
+      o.stop(when + dur + 0.05);
+    }
+    function bell(freq, when, dur, gain, pan) {
+      voice(freq, when, dur, { type: 'sine', gain, pan });
+      voice(freq * 2.76, when, dur * 0.5, { type: 'sine', gain: gain * 0.3, pan });
+    }
+    // 速い再生でも鳴りすぎないよう、1秒あたりの音の数を制限する
+    function take(n) {
+      const now = ctx.currentTime;
+      tokens = Math.min(8, tokens + (now - lastRefill) * 10);
+      lastRefill = now;
+      if (tokens < n) return false;
+      tokens -= n;
+      return true;
+    }
+
+    function handle(e) {
+      if (!enabled || !ctx || ctx.state !== 'running') return;
+      const now = ctx.currentTime + 0.02;
+      const pan = panOf(e.x ?? POND_W / 2);
+      if (e.kind === 'trio') {
+        recentTrio = recentTrio.filter((t) => now - t < 1.5);
+        if (recentTrio.length >= 3) return;
+        recentTrio.push(now);
+        const notes = e.parents.map((p) => pitch(p.sex, p.size)).sort((a, b) => a - b);
+        notes.forEach((f, k) => {
+          voice(f, now + k * 0.09, 2.4, { gain: 0.15, pan });
+          voice(f, now + k * 0.09, 2.4, { type: 'sine', gain: 0.08, pan });
+        });
+        bell(TONE[1] * 4, now + 0.3, 1.8, 0.05, pan);
+        bell(TONE[3] * 4, now + 0.42, 1.6, 0.04, pan);
+      } else if (e.kind === 'pair') {
+        if (!take(1)) return;
+        e.parents.forEach((p, k) => voice(pitch(p.sex, p.size), now + k * 0.07, 0.7, { gain: 0.12, pan }));
+      } else if (e.kind === 'join') {
+        if (!take(1)) return;
+        bell(TONE[3] * 2, now, 0.5, 0.04, pan);
+      } else if (e.kind === 'hatch') {
+        if (!take(2)) return;
+        voice(TONE[e.sex] * 2, now, 0.15, { type: 'sine', gain: 0.05, pan });
+      } else if (e.kind === 'death') {
+        if (!take(2)) return;
+        voice(TONE[e.sex] / 2, now, 0.9, { type: 'sine', gain: 0.07, pan, glideTo: TONE[e.sex] / 4 });
+      } else if (e.kind === 'gen') {
+        bell(TONE[1] * 4, now, 1.2, 0.05, 0);
+        bell(TONE[2] * 4, now + 0.12, 1.2, 0.04, 0);
+      }
+    }
+
+    // 背景の和音の大きさを、性ごとの数に合わせる
+    function updatePad(counts, active) {
+      if (!enabled || !ctx) return;
+      const t = ctx.currentTime;
+      if (t - lastPad < 0.4) return;
+      lastPad = t;
+      const total = counts[1] + counts[2] + counts[3];
+      for (let s = 1; s <= 3; s++) {
+        const share = total ? (counts[s] / total) * 3 : 0;
+        padGains[s].gain.setTargetAtTime(Math.min(1.5, share) * 0.06, t, 0.8);
+      }
+      padOut.gain.setTargetAtTime(el('pad').checked && active ? 1 : 0, t, 0.6);
+    }
+
+    async function toggle() {
+      if (!ctx) init();
+      enabled = !enabled;
+      if (enabled) {
+        await ctx.resume();
+        lastPad = 0;
+      } else {
+        padOut.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+        setTimeout(() => { if (!enabled) ctx.suspend(); }, 400);
+      }
+      return enabled;
+    }
+    function setVolume() {
+      if (ctx) master.gain.setTargetAtTime(volume(), ctx.currentTime, 0.05);
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (!ctx) return;
+      if (document.hidden) ctx.suspend();
+      else if (enabled) ctx.resume();
+    });
+    return { handle, updatePad, toggle, setVolume };
+  })();
+
   function newPond() {
     pond = createPond(settings(), seed);
+    pond.onEvent = audio.handle;
     selected = null;
     infoKey = '';
     lastLogSize = -1;
@@ -921,6 +1100,7 @@ function createPond(opts, seed) {
     }
     render();
     updatePanels();
+    audio.updatePad(pond.counts(), running);
     requestAnimationFrame(frame);
   }
 
@@ -941,6 +1121,12 @@ function createPond(opts, seed) {
     running = !running;
     el('play').textContent = running ? '一時停止' : '再開';
   });
+  el('sound').addEventListener('click', async () => {
+    const on = await audio.toggle();
+    el('sound').setAttribute('aria-pressed', String(on));
+    el('sound').textContent = on ? '♪ 音を止める' : '♪ 音を出す';
+  });
+  el('volume').addEventListener('input', audio.setVolume);
   el('restart').addEventListener('click', newPond);
   el('newPond').addEventListener('click', () => { seed = Math.floor(Math.random() * 2 ** 31); newPond(); });
   ['power', 'childRule', 'inherit', 'count'].forEach((id) => el(id).addEventListener('change', newPond));
