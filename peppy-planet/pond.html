@@ -1,0 +1,959 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ペピーの池</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f9f9f7;
+    --panel: #fcfcfb;
+    --text: #0b0b0b;
+    --text-2: #52514e;
+    --muted: #898781;
+    --border: rgba(11, 11, 11, 0.12);
+    --male: #2a78d6;
+    --female: #eb6834;
+    --peppy: #1baf7a;
+    --water-top: #dcebf3;
+    --water-bottom: #b9d6e6;
+    --food: #8a9a5b;
+    --egg: rgba(255, 255, 255, 0.85);
+    --bond: #d4537e;
+    --glow: #f2b400;
+    --eye: #0b0b0b;
+    --ripple: rgba(255, 255, 255, 0.06);
+    --accent: #2a78d6;
+    --accent-text: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --bg: #0d0d0d;
+      --panel: #1a1a19;
+      --text: #ffffff;
+      --text-2: #c3c2b7;
+      --muted: #898781;
+      --border: rgba(255, 255, 255, 0.12);
+      --male: #3987e5;
+      --female: #d95926;
+      --peppy: #199e70;
+      --water-top: #0f2533;
+      --water-bottom: #08151f;
+      --food: #8fa564;
+      --egg: rgba(235, 240, 245, 0.8);
+      --bond: #e66b97;
+      --glow: #ffcc33;
+      --eye: #0b0b0b;
+      --ripple: rgba(120, 180, 220, 0.025);
+      --accent: #3987e5;
+      --accent-text: #ffffff;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --panel: #1a1a19;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --muted: #898781;
+    --border: rgba(255, 255, 255, 0.12);
+    --male: #3987e5;
+    --female: #d95926;
+    --peppy: #199e70;
+    --water-top: #0f2533;
+    --water-bottom: #08151f;
+    --food: #8fa564;
+    --egg: rgba(235, 240, 245, 0.8);
+    --bond: #e66b97;
+    --glow: #ffcc33;
+    --eye: #0b0b0b;
+    --ripple: rgba(120, 180, 220, 0.025);
+    --accent: #3987e5;
+    --accent-text: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  a { color: var(--accent); }
+  .links { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.85rem; }
+  h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+  h2 { font-size: 1rem; margin: 0 0 10px; }
+  .lead { color: var(--text-2); margin: 0 0 16px; font-size: 0.9rem; line-height: 1.6; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .settings { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; font-size: 0.9rem; margin-bottom: 12px; }
+  .settings label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .settings select { max-width: 100%; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 0.9rem; }
+  button, select {
+    font: inherit; font-size: 0.9rem;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover, select:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); min-width: 6.5em; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+  .stat .label { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-2); }
+  .stat .value { font-size: 1.15rem; font-weight: 600; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; display: inline-block; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  .pond {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .pond canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulation; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; color: var(--text-2); margin-top: 8px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend canvas { width: 30px; height: 18px; }
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .info .empty { color: var(--muted); font-size: 0.88rem; line-height: 1.6; margin: 0; }
+  .info .head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .info .portrait { width: 96px; height: 64px; border-radius: 6px; background: linear-gradient(var(--water-top), var(--water-bottom)); flex: none; }
+  .info .name { font-weight: 600; }
+  .info .sub { font-size: 0.8rem; color: var(--text-2); }
+  .info dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; font-size: 0.85rem; }
+  .info dt { color: var(--text-2); }
+  .info dd { margin: 0; }
+  .bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 6px; }
+  .bar i { display: block; height: 100%; background: var(--peppy); }
+  .log { list-style: none; padding: 0; margin: 0; font-size: 0.82rem; line-height: 1.5; max-height: 260px; overflow-y: auto; }
+  .log li { padding: 4px 0; border-bottom: 1px solid var(--border); color: var(--text-2); }
+  .log li:last-child { border-bottom: 0; }
+  .log time { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  .log li.trio { color: var(--text); }
+  .log li.trio::before { content: "✦ "; color: var(--glow); }
+  details { margin-top: 14px; font-size: 0.9rem; }
+  summary { cursor: pointer; }
+  details ul { color: var(--text-2); padding-left: 20px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<main>
+  <div class="links">
+    <a href="index.html">← 星全体のようす（ライフゲーム版）</a>
+    <a href="rules.html">ルール図鑑</a>
+  </div>
+  <h1>ペピーの池</h1>
+  <p class="lead">
+    ♂・♀・Pの生き物たちが池を泳ぎ、えさを食べ、出会い、卵を産みます。
+    違う性の2匹が出会うと寄り添い（ハートの線）、そこへ3つ目の性が加わると3性の交配（光る三角形）になって、光る3性の子が生まれます。
+    生き物を押すと、その一匹のことが分かります。
+  </p>
+
+  <div class="settings">
+    <label>3性の子の力
+      <select id="power">
+        <option value="none">力なし</option>
+        <option value="longevity">長寿（寿命が1.8倍）</option>
+        <option value="guardian">守護（近くの仲間はおなかが減りにくい）</option>
+        <option value="fertility" selected>多産（交配で卵を3つ産む）</option>
+        <option value="wildcard">万能（どの性とも交配できる）</option>
+      </select>
+    </label>
+    <label>2性の交配で生まれる子
+      <select id="childRule">
+        <option value="missing">両親にいない性</option>
+        <option value="random">両親のどちらかの性</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="inherit"> 力が子に受け継がれる</label>
+    <label>最初の数
+      <select id="count">
+        <option value="30">30匹</option>
+        <option value="45" selected>45匹</option>
+        <option value="60">60匹</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="controls">
+    <button id="play" class="primary">一時停止</button>
+    <label>速さ
+      <select id="speed">
+        <option value="0.5">ゆっくり</option>
+        <option value="1" selected>ふつう</option>
+        <option value="3">はやい</option>
+        <option value="8">とてもはやい</option>
+      </select>
+    </label>
+    <button id="restart">同じ池でやり直す</button>
+    <button id="newPond">新しい池をつくる</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="label">経過時間</div><div class="value" id="time">0:00</div></div>
+    <div class="stat"><div class="label"><i class="swatch" style="background:var(--male)"></i>male ♂</div><div class="value" id="c1">0</div></div>
+    <div class="stat"><div class="label"><i class="swatch" style="background:var(--female)"></i>female ♀</div><div class="value" id="c2">0</div></div>
+    <div class="stat"><div class="label"><i class="swatch" style="background:var(--peppy)"></i>peppy P</div><div class="value" id="c3">0</div></div>
+    <div class="stat"><div class="label"><i class="swatch" style="background:var(--glow);border-radius:50%"></i>うち3性の子</div><div class="value" id="csp">0</div></div>
+    <div class="stat"><div class="label">卵</div><div class="value" id="cegg">0</div></div>
+    <div class="stat"><div class="label">最新の世代</div><div class="value" id="gen">第0世代</div></div>
+    <div class="stat"><div class="label">交配の回数</div><div class="value" style="font-size:0.9rem;line-height:1.45">3性 <span id="trio">0</span><br>2性 <span id="pair">0</span></div></div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="pond"><canvas id="pond" aria-label="池のようす。生き物を押すと詳しく表示します"></canvas></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="side">
+      <section class="card info" id="info" aria-live="polite"></section>
+      <section class="card">
+        <h2>池のできごと</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+    </div>
+  </div>
+
+  <details>
+    <summary>この池のしくみ</summary>
+    <ul>
+      <li><b>一生</b>：卵からかえった子どもは小さく、しばらくすると大人になり、交配できるようになります。年をとると色があせてゆっくり泳ぎ、やがて寿命で死にます。えさを食べられないと飢えて死にます。</li>
+      <li><b>えさ</b>：池には小さなえさ（点）が少しずつわきます。えさの量が、池で暮らせる数を決めます。</li>
+      <li><b>2性の交配</b>：体力のある大人が、自分と違う性の大人と出会うと寄り添います（ハートの線）。しばらくすると卵が生まれます。</li>
+      <li><b>3性の交配</b>：寄り添う2匹のところへ、足りない3つ目の性の大人がやって来ると三角形に結ばれ、光る3性の子の卵が生まれます。</li>
+      <li><b>体力</b>：交配すると親は体力を使い、その体力が卵の体力になります。多産で卵が3つになると、1つあたりの体力は小さくなります。</li>
+      <li><b>遺伝</b>：子は親の大きさ・速さ・体形・模様・色合いを混ぜて受け継ぎ、少しだけ変化（突然変異）します。速く泳ぐ子はえさや相手を見つけやすい代わりに、おなかが減りやすくなります。</li>
+      <li><b>見分け方</b>：性は体の色と尾の形で分かります（♂は二股の尾、♀は丸い尾、Pは三つ葉の尾）。3性の子は金色に光り、体の真ん中に白い印があります。</li>
+    </ul>
+  </details>
+</main>
+
+<script>
+// ===== POND ENGINE START =====
+const POND_W = 1000;
+const POND_H = 620;
+const P = {
+  foodRate: 7, foodMax: 220, foodEnergy: 0.2, maxCreatures: 320,
+  drain: 0.011, readyEnergy: 0.5, mateCost: 0.3, cooldown: 7,
+  eggTime: 4, adultAge: 10, lifespan: 70,
+  courtTime: 2.5, touch: 16, joinRadius: 46, senseMate: 130, senseFood: 100,
+  baseSpeed: 34, guardianRadius: 60,
+};
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function createPond(opts, seed) {
+  const rnd = mulberry32(seed);
+  const gauss = () => (rnd() + rnd() + rnd() - 1.5) / 1.5;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  let nextId = 1;
+  const pond = {
+    time: 0, creatures: [], food: [], courtships: [], effects: [], log: [],
+    births: { pair: 0, trio: 0 }, maxGen: 0, extinct: new Set(),
+  };
+
+  function randomGenes() {
+    return { size: 0.85 + rnd() * 0.3, speed: 0.85 + rnd() * 0.3, round: 0.55 + rnd() * 0.4, spots: rnd(), hue: gauss() * 0.4 };
+  }
+  function mixGenes(parents) {
+    const g = {};
+    for (const k of ['size', 'speed', 'round', 'spots', 'hue']) {
+      g[k] = parents.reduce((s, p) => s + p.genes[k], 0) / parents.length + gauss() * 0.06;
+    }
+    g.size = clamp(g.size, 0.7, 1.35); g.speed = clamp(g.speed, 0.6, 1.4);
+    g.round = clamp(g.round, 0.45, 1); g.spots = clamp(g.spots, 0, 1); g.hue = clamp(g.hue, -1, 1);
+    return g;
+  }
+  function makeCreature(props) {
+    const c = {
+      id: nextId++, sex: 1, sp: 0, x: rnd() * POND_W, y: rnd() * POND_H,
+      vx: 0, vy: 0, angle: rnd() * Math.PI * 2, wander: rnd() * Math.PI * 2,
+      stage: 'adult', age: P.adultAge + rnd() * 20, eggTimer: 0,
+      energy: 0.6 + rnd() * 0.3, cooldown: rnd() * 4, lifespan: P.lifespan * (0.85 + rnd() * 0.3),
+      genes: randomGenes(), gen: 0, parents: [], kids: [], children: 0, court: null, phase: rnd() * 10,
+      ...props,
+    };
+    if (opts.power === 'longevity' && c.sp) c.lifespan *= 1.8;
+    pond.creatures.push(c);
+    return c;
+  }
+  const say = (kind, text) => { pond.log.unshift({ t: pond.time, kind, text }); if (pond.log.length > 40) pond.log.pop(); };
+
+  for (let i = 0; i < opts.count; i++) makeCreature({ sex: 1 + (i % 3) });
+  for (let i = 0; i < 60; i++) pond.food.push({ x: rnd() * POND_W, y: rnd() * POND_H });
+
+  const alive = (c) => !c.dead && c.stage !== 'egg';
+  const ready = (c) => alive(c) && c.stage === 'adult' && !c.court && c.cooldown <= 0 && c.energy >= P.readyEnergy;
+  const wild = (c) => opts.power === 'wildcard' && c.sp;
+  const compatible = (a, b) => a.sex !== b.sex || wild(a) || wild(b);
+  // 2匹の求愛に3匹目が加わると3性になるか
+  function completesTrio(members, c) {
+    if (!members.every((m) => compatible(m, c))) return false;
+    const sexes = new Set([...members.map((m) => m.sex), c.sex]);
+    if (sexes.size === 3) return true;
+    return [...members, c].some(wild);
+  }
+  const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+
+  function lay(parents) {
+    const trio = parents.length === 3;
+    const anySpecial = parents.some((p) => p.sp);
+    const eggs = opts.power === 'fertility' && anySpecial ? 3 : 1;
+    // 親が使った体力が卵の体力になる（卵が多いほど1つあたりは小さい）
+    const eggEnergy = (P.mateCost * parents.length * 0.9) / eggs;
+    if (pond.creatures.length + eggs > P.maxCreatures) return;
+    const cx = parents.reduce((s, p) => s + p.x, 0) / parents.length;
+    const cy = parents.reduce((s, p) => s + p.y, 0) / parents.length;
+    const gen = Math.max(...parents.map((p) => p.gen)) + 1;
+    for (let k = 0; k < eggs; k++) {
+      let sex, sp = 0;
+      if (trio) { sex = 1 + Math.floor(rnd() * 3); sp = 1; }
+      else if (opts.childRule === 'missing') {
+        const missing = [1, 2, 3].filter((s) => !parents.some((p) => p.sex === s));
+        sex = missing[Math.floor(rnd() * missing.length)];
+      } else sex = parents[Math.floor(rnd() * parents.length)].sex;
+      if (!trio && opts.inherit && anySpecial && rnd() < 0.5) sp = 1;
+      const egg = makeCreature({
+        sex, sp, x: cx + gauss() * 10, y: cy + gauss() * 10, stage: 'egg', age: 0, eggTimer: P.eggTime * (0.8 + rnd() * 0.4),
+        energy: eggEnergy, cooldown: 0, genes: mixGenes(parents), gen,
+        parents: parents.map((p) => ({ id: p.id, sex: p.sex, sp: p.sp, gen: p.gen })),
+      });
+      if (gen > pond.maxGen) { pond.maxGen = gen; say('gen', `第${gen}世代が初めて誕生しました`); }
+      egg.vx = gauss() * 8; egg.vy = gauss() * 8;
+      for (const p of parents) p.kids.push(egg.id);
+    }
+    for (const p of parents) { p.energy -= P.mateCost; p.cooldown = P.cooldown; p.children += eggs; }
+    pond.effects.push({ kind: trio ? 'trio' : 'pair', x: cx, y: cy, t: 0 });
+    if (trio) {
+      pond.births.trio++;
+      say('trio', `3性の交配！ ${parents.map((p) => '♂♀P'[p.sex - 1]).join('・')} から3性の子が生まれます`);
+    } else pond.births.pair++;
+  }
+
+  pond.tick = function (dt) {
+    pond.time += dt;
+    // 餌（プランクトン）がわく
+    pond.foodAcc = (pond.foodAcc || 0) + P.foodRate * dt;
+    while (pond.foodAcc >= 1) {
+      pond.foodAcc--;
+      if (pond.food.length < P.foodMax) pond.food.push({ x: rnd() * POND_W, y: rnd() * POND_H });
+    }
+    const list = pond.creatures;
+    const specials = opts.power === 'guardian' ? list.filter((c) => c.sp && alive(c)) : [];
+
+    for (const c of list) {
+      c.phase += dt;
+      if (c.stage === 'egg') {
+        c.eggTimer -= dt;
+        c.vx *= 0.96; c.vy *= 0.96; c.x += c.vx * dt; c.y += c.vy * dt;
+        if (c.eggTimer <= 0) { c.stage = 'young'; c.age = 0; pond.effects.push({ kind: 'hatch', x: c.x, y: c.y, t: 0, sex: c.sex }); }
+        continue;
+      }
+      c.age += dt;
+      c.cooldown -= dt;
+      let drain = P.drain * (0.6 + 0.4 * c.genes.speed) * (c.court ? 0.5 : 1);
+      if (specials.length && !c.sp && specials.some((s) => dist2(s, c) < P.guardianRadius ** 2)) drain *= 0.5;
+      c.energy -= drain * dt;
+      if (c.stage === 'young' && c.age >= P.adultAge) c.stage = 'adult';
+      if (c.energy <= 0 || c.age >= c.lifespan) {
+        c.dead = true;
+        c.cause = c.energy <= 0 ? '飢え' : '寿命';
+        pond.effects.push({ kind: 'death', x: c.x, y: c.y, t: 0, sex: c.sex, size: c.genes.size });
+        continue;
+      }
+
+      // 行き先を決める
+      const speed = P.baseSpeed * c.genes.speed * (c.stage === 'young' ? 0.8 : 1) * (c.age > c.lifespan * 0.8 ? 0.6 : 1);
+      let tx = null, ty = null, sp = speed;
+      if (c.court) {
+        tx = c.court.x; ty = c.court.y; sp = speed * 0.5;
+      } else {
+        if (ready(c)) {
+          let best = null, bd = P.senseMate ** 2;
+          for (const o of list) {
+            if (o === c || !ready(o) || !compatible(c, o)) continue;
+            const d = dist2(c, o); if (d < bd) { bd = d; best = o; }
+          }
+          for (const ct of pond.courtships) {
+            if (ct.members.length !== 2 || !completesTrio(ct.members, c)) continue;
+            const d = dist2(c, ct); if (d < bd) { bd = d; best = ct; }
+          }
+          if (best) { tx = best.x; ty = best.y; sp = speed * 1.15; }
+        }
+        if (tx === null && c.energy < 0.8) {
+          let best = null, bd = P.senseFood ** 2;
+          for (const f of pond.food) { const d = dist2(c, f); if (d < bd) { bd = d; best = f; } }
+          if (best) { tx = best.x; ty = best.y; }
+        }
+      }
+      let ax, ay;
+      if (tx !== null) {
+        const dx = tx - c.x, dy = ty - c.y, d = Math.hypot(dx, dy) || 1;
+        ax = dx / d; ay = dy / d;
+      } else {
+        c.wander += gauss() * 2.2 * dt;
+        ax = Math.cos(c.wander); ay = Math.sin(c.wander);
+      }
+      // 壁を避ける
+      const m = 40;
+      if (c.x < m) ax += (m - c.x) / m; if (c.x > POND_W - m) ax -= (c.x - POND_W + m) / m;
+      if (c.y < m) ay += (m - c.y) / m; if (c.y > POND_H - m) ay -= (c.y - POND_H + m) / m;
+      const al = Math.hypot(ax, ay) || 1;
+      const k = Math.min(1, dt * 3);
+      c.vx += (ax / al * sp - c.vx) * k;
+      c.vy += (ay / al * sp - c.vy) * k;
+      if (c.court && Math.hypot(c.x - c.court.x, c.y - c.court.y) < 6) { c.vx *= 0.8; c.vy *= 0.8; }
+      c.x = clamp(c.x + c.vx * dt, 2, POND_W - 2);
+      c.y = clamp(c.y + c.vy * dt, 2, POND_H - 2);
+      if (Math.hypot(c.vx, c.vy) > 1) c.angle = Math.atan2(c.vy, c.vx);
+      if (tx === null && !c.court) c.wander = c.angle + (c.wander - c.angle) * 0.98;
+
+      // 餌を食べる
+      if (c.energy < 1) {
+        for (let i = 0; i < pond.food.length; i++) {
+          const f = pond.food[i];
+          if ((f.x - c.x) ** 2 + (f.y - c.y) ** 2 < 100) {
+            c.energy = Math.min(1, c.energy + P.foodEnergy);
+            pond.food.splice(i, 1);
+            break;
+          }
+        }
+      }
+    }
+
+    // 3匹目が求愛に加わる
+    for (const ct of pond.courtships) {
+      if (ct.members.length !== 2) continue;
+      for (const c of list) {
+        if (!ready(c) || dist2(c, ct) > P.joinRadius ** 2 || !completesTrio(ct.members, c)) continue;
+        ct.members.push(c); c.court = ct; ct.t = Math.min(ct.t, P.courtTime * 0.4);
+        pond.effects.push({ kind: 'join', x: ct.x, y: ct.y, t: 0 });
+        break;
+      }
+    }
+    // 出会った2匹が求愛を始める
+    for (const a of list) {
+      if (!ready(a)) continue;
+      for (const b of list) {
+        if (b === a || !ready(b) || !compatible(a, b) || dist2(a, b) > P.touch ** 2) continue;
+        const ct = { members: [a, b], t: 0, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        a.court = ct; b.court = ct;
+        pond.courtships.push(ct);
+        break;
+      }
+    }
+    // 求愛の進行
+    for (const ct of pond.courtships) {
+      ct.members = ct.members.filter((m) => !m.dead);
+      if (ct.members.length < 2) { ct.done = true; continue; }
+      ct.t += dt;
+      if (ct.t >= P.courtTime) { lay(ct.members); ct.done = true; }
+    }
+    for (const ct of pond.courtships) if (ct.done) ct.members.forEach((m) => { if (m.court === ct) m.court = null; });
+    pond.courtships = pond.courtships.filter((ct) => !ct.done);
+
+    // 死んだものを片づけ、性の絶滅を記録する
+    if (list.some((c) => c.dead)) {
+      pond.creatures = list.filter((c) => !c.dead);
+      for (let s = 1; s <= 3; s++) {
+        if (!pond.extinct.has(s) && !pond.creatures.some((c) => c.sex === s)) {
+          pond.extinct.add(s);
+          say('extinct', `${['', '♂', '♀', 'P'][s]} がいなくなりました`);
+        }
+      }
+      if (pond.creatures.length === 0 && !pond.empty) { pond.empty = true; say('extinct', '池から生き物がいなくなりました'); }
+    }
+    for (const e of pond.effects) e.t += dt;
+    pond.effects = pond.effects.filter((e) => e.t < 2);
+  };
+
+  pond.counts = function () {
+    const c = { 1: 0, 2: 0, 3: 0, egg: 0, sp: 0 };
+    for (const x of pond.creatures) { if (x.stage === 'egg') c.egg++; else { c[x.sex]++; if (x.sp) c.sp++; } }
+    return c;
+  };
+  return pond;
+}
+// ===== POND ENGINE END =====
+
+(() => {
+  const SYMBOL = ['', '♂', '♀', 'P'];
+  const SEX_NAME = ['', 'male ♂', 'female ♀', 'peppy P'];
+  const el = (id) => document.getElementById(id);
+  const canvas = el('pond');
+  const ctx = canvas.getContext('2d');
+
+  let pond = null;
+  let seed = 1;
+  let running = true;
+  let selected = null;
+  let scale = 1;
+  let palette = {};
+  let lastFrame = performance.now();
+  let acc = 0;
+
+  // ---------- 色 ----------
+  function hexToHsl(hex) {
+    const c = document.createElement('canvas').getContext('2d');
+    c.fillStyle = hex; c.fillRect(0, 0, 1, 1);
+    const [r, g, b] = c.getImageData(0, 0, 1, 1).data;
+    const R = r / 255, G = g / 255, B = b / 255;
+    const max = Math.max(R, G, B), min = Math.min(R, G, B), l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      h = max === R ? (G - B) / d + (G < B ? 6 : 0) : max === G ? (B - R) / d + 2 : (R - G) / d + 4;
+      h *= 60;
+    }
+    return { h, s: s * 100, l: l * 100 };
+  }
+  function readPalette() {
+    const css = getComputedStyle(document.documentElement);
+    const v = (n) => css.getPropertyValue(n).trim();
+    palette = {
+      sex: ['', v('--male'), v('--female'), v('--peppy')],
+      hsl: ['', hexToHsl(v('--male')), hexToHsl(v('--female')), hexToHsl(v('--peppy'))],
+      top: v('--water-top'), bottom: v('--water-bottom'),
+      food: v('--food'), ripple: v('--ripple'), egg: v('--egg'), bond: v('--bond'), glow: v('--glow'), eye: v('--eye'),
+    };
+  }
+  function bodyColor(c, alpha = 1) {
+    const base = palette.hsl[c.sex];
+    const old = Math.max(0, (c.age - c.lifespan * 0.75) / (c.lifespan * 0.25));
+    const h = base.h + c.genes.hue * 18;
+    const s = base.s * (1 - old * 0.6);
+    const l = base.l + old * 12;
+    return `hsla(${h.toFixed(1)}, ${s.toFixed(1)}%, ${l.toFixed(1)}%, ${alpha})`;
+  }
+
+  // ---------- 生き物の描き方 ----------
+  function drawCreature(g, c, t, opts = {}) {
+    const young = c.stage === 'young' ? 0.5 + 0.5 * Math.min(1, c.age / P.adultAge) : 1;
+    const s = c.genes.size * young * (opts.zoom || 1);
+    const L = 12 * s;
+    const W = L * c.genes.round * 0.62;
+    const old = c.age > c.lifespan * 0.75;
+    const alpha = old ? 0.55 + 0.45 * (1 - (c.age - c.lifespan * 0.75) / (c.lifespan * 0.25)) : 1;
+    const color = bodyColor(c, alpha);
+    const wig = Math.sin(c.phase * 9 * c.genes.speed) * 0.35;
+
+    g.save();
+    g.translate(opts.x ?? c.x, opts.y ?? c.y);
+    g.rotate(opts.angle ?? c.angle);
+
+    if (c.sp) {
+      g.shadowColor = palette.glow;
+      g.shadowBlur = 10 * (opts.zoom || 1) * (0.8 + 0.2 * Math.sin(t * 3 + c.id));
+    }
+
+    // 尾（性ごとに形が違う）
+    g.save();
+    g.translate(-L * 0.8, 0);
+    g.rotate(wig);
+    g.fillStyle = color;
+    g.beginPath();
+    if (c.sex === 1) {
+      g.moveTo(0, 0); g.lineTo(-L * 0.9, -W * 1.0); g.lineTo(-L * 0.55, 0); g.lineTo(-L * 0.9, W * 1.0);
+    } else if (c.sex === 2) {
+      g.moveTo(0, -W * 0.25); g.lineTo(0, W * 0.25);
+      g.arc(-L * 0.45, 0, W * 0.8, Math.PI * 0.35, Math.PI * 1.65);
+    } else {
+      g.moveTo(0, -W * 0.2); g.lineTo(-L * 0.35, 0); g.lineTo(0, W * 0.2);
+      g.arc(-L * 0.55, -W * 0.7, W * 0.38, 0, Math.PI * 2);
+      g.moveTo(-L * 0.4, 0); g.arc(-L * 0.75, 0, W * 0.38, 0, Math.PI * 2);
+      g.moveTo(-L * 0.2, W * 0.7); g.arc(-L * 0.55, W * 0.7, W * 0.38, 0, Math.PI * 2);
+    }
+    g.closePath();
+    g.fill();
+    g.restore();
+
+    // 体
+    g.fillStyle = color;
+    g.beginPath();
+    g.ellipse(0, 0, L, W, 0, 0, Math.PI * 2);
+    g.fill();
+    g.shadowBlur = 0;
+
+    // 模様（斑点）
+    const spots = Math.floor(c.genes.spots * 4);
+    g.fillStyle = `rgba(255, 255, 255, ${0.35 * alpha})`;
+    for (let k = 0; k < spots; k++) {
+      g.beginPath();
+      g.arc(-L * 0.45 + k * L * 0.3, (k % 2 ? 1 : -1) * W * 0.35, W * 0.16, 0, Math.PI * 2);
+      g.fill();
+    }
+    // 3性の子の白い印
+    if (c.sp) {
+      g.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      g.beginPath();
+      g.arc(-L * 0.05, 0, Math.max(1.2, W * 0.32), 0, Math.PI * 2);
+      g.fill();
+    }
+    // 目
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.arc(L * 0.55, -W * 0.3, Math.max(1, W * 0.24), 0, Math.PI * 2); g.fill();
+    g.fillStyle = palette.eye;
+    g.beginPath(); g.arc(L * 0.6, -W * 0.3, Math.max(0.6, W * 0.13), 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+
+  function drawEgg(g, c, t) {
+    const hatching = c.eggTimer < 1 ? Math.sin(t * 30) * 0.15 * (1 - c.eggTimer) : 0;
+    g.save();
+    g.translate(c.x, c.y);
+    g.rotate(hatching);
+    if (c.sp) { g.shadowColor = palette.glow; g.shadowBlur = 10; }
+    g.fillStyle = palette.egg;
+    g.beginPath(); g.ellipse(0, 0, 5.5, 4.5, 0, 0, Math.PI * 2); g.fill();
+    g.shadowBlur = 0;
+    g.strokeStyle = palette.sex[c.sex]; g.lineWidth = 1;
+    g.stroke();
+    g.fillStyle = palette.sex[c.sex];
+    g.beginPath(); g.arc(0.6, 0, 1.7, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+
+  function heart(g, x, y, size, color) {
+    g.save();
+    g.translate(x, y);
+    g.scale(size / 10, size / 10);
+    g.fillStyle = color;
+    g.beginPath();
+    g.moveTo(0, 3);
+    g.bezierCurveTo(-6, -2, -3, -7, 0, -3.5);
+    g.bezierCurveTo(3, -7, 6, -2, 0, 3);
+    g.fill();
+    g.restore();
+  }
+
+  function sparkle(g, x, y, r, color, alpha) {
+    g.save();
+    g.globalAlpha = alpha;
+    g.strokeStyle = color;
+    g.lineWidth = 1.5;
+    for (let k = 0; k < 8; k++) {
+      const a = (Math.PI / 4) * k;
+      g.beginPath();
+      g.moveTo(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6);
+      g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  // ---------- 池の描画 ----------
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const width = canvas.parentElement.clientWidth;
+    scale = width / POND_W;
+    canvas.style.height = POND_H * scale + 'px';
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(POND_H * scale * dpr);
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+  }
+
+  function render() {
+    const t = performance.now() / 1000;
+    const grad = ctx.createLinearGradient(0, 0, 0, POND_H);
+    grad.addColorStop(0, palette.top);
+    grad.addColorStop(1, palette.bottom);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, POND_W, POND_H);
+
+    // 水面のゆらめき
+    ctx.fillStyle = palette.ripple;
+    for (let k = 0; k < 7; k++) {
+      const x = (k * 173 + Math.sin(t * 0.2 + k) * 60 + POND_W) % POND_W;
+      const y = (k * 97 + Math.cos(t * 0.15 + k * 2) * 40 + POND_H) % POND_H;
+      ctx.beginPath(); ctx.ellipse(x, y, 90, 30, 0.3, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.fillStyle = palette.food;
+    for (const f of pond.food) { ctx.beginPath(); ctx.arc(f.x, f.y, 1.7, 0, Math.PI * 2); ctx.fill(); }
+
+    // 選んだ生き物の家族を線で結ぶ
+    if (selected && !selected.dead) {
+      const byId = new Map(pond.creatures.map((c) => [c.id, c]));
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = palette.glow;
+      for (const p of selected.parents) {
+        const q = byId.get(p.id);
+        if (!q) continue;
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(selected.x, selected.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
+      ctx.setLineDash([3, 4]);
+      for (const id of selected.kids) {
+        const q = byId.get(id);
+        if (!q) continue;
+        ctx.beginPath(); ctx.moveTo(selected.x, selected.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+
+    // 求愛中のきずな
+    for (const ct of pond.courtships) {
+      const m = ct.members;
+      const progress = Math.min(1, ct.t / P.courtTime);
+      if (m.length === 3) {
+        ctx.fillStyle = 'rgba(255, 210, 80, 0.18)';
+        ctx.strokeStyle = palette.glow;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(m[0].x, m[0].y); ctx.lineTo(m[1].x, m[1].y); ctx.lineTo(m[2].x, m[2].y); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        sparkle(ctx, ct.x, ct.y, 10 + 4 * Math.sin(t * 6), palette.glow, 0.9);
+      } else {
+        ctx.strokeStyle = palette.bond;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(m[0].x, m[0].y); ctx.lineTo(m[1].x, m[1].y); ctx.stroke();
+        heart(ctx, ct.x, ct.y - 10 - 2 * Math.sin(t * 5), 9, palette.bond);
+      }
+      ctx.strokeStyle = m.length === 3 ? palette.glow : palette.bond;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(ct.x, ct.y, 16, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+      ctx.stroke();
+    }
+
+    for (const c of pond.creatures) if (c.stage === 'egg') drawEgg(ctx, c, t);
+    for (const c of pond.creatures) if (c.stage !== 'egg') drawCreature(ctx, c, t);
+
+    // 誕生・ふ化・死のしるし
+    for (const e of pond.effects) {
+      const k = e.t / 2;
+      if (e.kind === 'pair') {
+        ctx.strokeStyle = palette.bond; ctx.globalAlpha = 1 - k; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(e.x, e.y, 6 + k * 30, 0, Math.PI * 2); ctx.stroke();
+        heart(ctx, e.x, e.y - 12 - k * 30, 11, palette.bond);
+      } else if (e.kind === 'trio') {
+        ctx.strokeStyle = palette.glow; ctx.globalAlpha = 1 - k; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(e.x, e.y, 8 + k * 70, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+        sparkle(ctx, e.x, e.y, 20 + k * 50, palette.glow, 1 - k);
+      } else if (e.kind === 'join') {
+        sparkle(ctx, e.x, e.y, 14 + k * 30, palette.glow, 1 - k);
+      } else if (e.kind === 'hatch') {
+        ctx.strokeStyle = palette.sex[e.sex]; ctx.globalAlpha = Math.max(0, 1 - k * 2); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(e.x, e.y, 4 + k * 24, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.kind === 'death') {
+        ctx.globalAlpha = 0.5 * (1 - k);
+        ctx.fillStyle = palette.sex[e.sex];
+        ctx.beginPath(); ctx.ellipse(e.x, e.y - k * 14, 8 * e.size, 4.5 * e.size, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; ctx.lineWidth = 1;
+        for (let b = 0; b < 3; b++) {
+          ctx.beginPath(); ctx.arc(e.x + (b - 1) * 5, e.y - 8 - k * 40 - b * 6, 1.5 + b * 0.6, 0, Math.PI * 2); ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    if (selected && !selected.dead) {
+      ctx.strokeStyle = palette.glow;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.arc(selected.x, selected.y, 24 * selected.genes.size, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // ---------- 表示（数・できごと・選んだ一匹） ----------
+  const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  let lastLogSize = -1;
+  let lastLogTop = null;
+
+  function updatePanels() {
+    const c = pond.counts();
+    el('time').textContent = fmtTime(pond.time);
+    el('c1').textContent = c[1]; el('c2').textContent = c[2]; el('c3').textContent = c[3];
+    el('csp').textContent = c.sp; el('cegg').textContent = c.egg;
+    el('gen').textContent = `第${pond.maxGen}世代`;
+    el('trio').textContent = pond.births.trio; el('pair').textContent = pond.births.pair;
+
+    if (pond.log.length !== lastLogSize || pond.log[0] !== lastLogTop) {
+      lastLogSize = pond.log.length; lastLogTop = pond.log[0];
+      el('log').innerHTML = pond.log.length
+        ? pond.log.map((e) => `<li class="${e.kind}"><time>${fmtTime(e.t)}</time>${e.text}</li>`).join('')
+        : '<li>まだ何も起きていません。</li>';
+    }
+    updateInfo();
+  }
+
+  const stageName = (c) => c.stage === 'egg' ? '卵' : c.stage === 'young' ? '子ども' : c.age > c.lifespan * 0.75 ? 'お年より' : '大人';
+  const geneWord = {
+    size: (v) => v < 0.9 ? '小さめ' : v > 1.12 ? '大きめ' : 'ふつう',
+    speed: (v) => v < 0.9 ? 'のんびり' : v > 1.12 ? 'すばやい' : 'ふつう',
+    round: (v) => v < 0.62 ? '細長い' : v > 0.85 ? 'まるい' : 'ふつう',
+  };
+  let infoKey = '';
+  const portrait = document.createElement('canvas');
+
+  function updateInfo() {
+    const box = el('info');
+    if (!selected || selected.dead) {
+      const key = selected ? `dead${selected.id}` : 'none';
+      if (key === infoKey) return;
+      infoKey = key;
+      box.innerHTML = selected
+        ? `<h2>選んだ一匹</h2><p class="empty">この${SYMBOL[selected.sex]}は${selected.cause}で一生を終えました（第${selected.gen}世代、子は${selected.children}匹）。<br>ほかの生き物を押してみてください。</p>`
+        : '<h2>選んだ一匹</h2><p class="empty">池の生き物や卵を押すと、ここにその一匹のことが表示されます。<br>親や子が池にいれば、金色の線で結ばれます（実線が親、点線が子）。</p>';
+      return;
+    }
+    const c = selected;
+    const byId = new Set(pond.creatures.map((x) => x.id));
+    const parentText = c.parents.length
+      ? c.parents.map((p) => `${SYMBOL[p.sex]}${p.sp ? '（3性の子）' : ''}${byId.has(p.id) ? '' : '†'}`).join('・') +
+        (c.parents.length === 3 ? ' の3性の交配' : ' の2性の交配')
+      : '池のはじまりからいる一匹';
+    const livingKids = c.kids.filter((id) => byId.has(id)).length;
+    const key = [c.id, c.stage, Math.round(c.energy * 20), c.children, livingKids, c.parents.map((p) => byId.has(p.id)).join()].join('|');
+    if (key !== infoKey) {
+      infoKey = key;
+      box.innerHTML =
+        `<h2>選んだ一匹</h2>` +
+        `<div class="head"><span id="portraitSlot"></span><div>` +
+        `<div class="name">${SEX_NAME[c.sex]}${c.sp ? '・3性の子 ✦' : ''}</div>` +
+        `<div class="sub">第${c.gen}世代・${stageName(c)}</div></div></div>` +
+        `<dl>` +
+        `<dt>親</dt><dd>${parentText}</dd>` +
+        `<dt>子</dt><dd>${c.children}匹${c.children ? `（今池にいるのは${livingKids}匹）` : ''}</dd>` +
+        (c.stage === 'egg'
+          ? `<dt>ふ化まで</dt><dd>あと${Math.max(0, c.eggTimer).toFixed(1)}秒</dd>`
+          : `<dt>年齢</dt><dd>${Math.floor(c.age)}秒（寿命およそ${Math.round(c.lifespan)}秒）</dd>`) +
+        `<dt>体力</dt><dd><div class="bar"><i style="width:${Math.max(0, Math.min(1, c.energy)) * 100}%"></i></div></dd>` +
+        `<dt>大きさ</dt><dd>${geneWord.size(c.genes.size)}</dd>` +
+        `<dt>泳ぎ</dt><dd>${geneWord.speed(c.genes.speed)}</dd>` +
+        `<dt>体形</dt><dd>${geneWord.round(c.genes.round)}</dd>` +
+        `<dt>模様</dt><dd>${Math.floor(c.genes.spots * 4) ? `斑点${Math.floor(c.genes.spots * 4)}つ` : '無地'}</dd>` +
+        `</dl>` +
+        (c.parents.some((p) => !byId.has(p.id)) ? '<p class="empty" style="font-size:0.75rem;margin-top:6px">† はもう池にいない親です。</p>' : '');
+      el('portraitSlot').replaceWith(portrait);
+      portrait.className = 'portrait';
+    }
+    drawPortrait(c);
+  }
+
+  function drawPortrait(c) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = 96, h = 64;
+    if (portrait.width !== w * dpr) { portrait.width = w * dpr; portrait.height = h * dpr; }
+    const g = portrait.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const t = performance.now() / 1000;
+    if (c.stage === 'egg') {
+      g.save(); g.translate(w / 2, h / 2); g.scale(3, 3); g.translate(-c.x, -c.y); drawEgg(g, c, t); g.restore();
+    } else {
+      drawCreature(g, c, t, { x: w / 2 + 6, y: h / 2, angle: 0, zoom: 1.8 / (c.stage === 'young' ? 0.5 + 0.5 * Math.min(1, c.age / P.adultAge) : 1) * 0.9 });
+    }
+  }
+
+  function buildLegend() {
+    const items = [
+      { sex: 1, text: 'male ♂（二股の尾）' },
+      { sex: 2, text: 'female ♀（丸い尾）' },
+      { sex: 3, text: 'peppy P（三つ葉の尾）' },
+      { sex: 2, sp: 1, text: '3性の子（金色の光と白い印）' },
+    ];
+    const box = el('legend');
+    box.innerHTML = '';
+    const dpr = window.devicePixelRatio || 1;
+    for (const it of items) {
+      const span = document.createElement('span');
+      const cv = document.createElement('canvas');
+      cv.width = 30 * dpr; cv.height = 18 * dpr;
+      const g = cv.getContext('2d');
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const fake = { sex: it.sex, sp: it.sp || 0, id: 0, stage: 'adult', age: 20, lifespan: 100, phase: 0, angle: 0,
+        genes: { size: 1, speed: 1, round: 0.7, spots: 0, hue: 0 } };
+      drawCreature(g, fake, 0, { x: 19, y: 9, angle: 0, zoom: 0.75 });
+      span.append(cv, it.text);
+      box.append(span);
+    }
+    const extra = document.createElement('span');
+    extra.innerHTML = '<svg width="22" height="12" aria-hidden="true"><line x1="1" y1="6" x2="21" y2="6" stroke="var(--bond)" stroke-width="2"/></svg>寄り添う2匹（2性）';
+    box.append(extra);
+    const extra2 = document.createElement('span');
+    extra2.innerHTML = '<svg width="16" height="14" aria-hidden="true"><polygon points="8,1 15,13 1,13" fill="none" stroke="var(--glow)" stroke-width="2"/></svg>結ばれた3匹（3性）';
+    box.append(extra2);
+  }
+
+  // ---------- 操作 ----------
+  function settings() {
+    return {
+      power: el('power').value, childRule: el('childRule').value,
+      inherit: el('inherit').checked, count: Number(el('count').value),
+    };
+  }
+  function newPond() {
+    pond = createPond(settings(), seed);
+    selected = null;
+    infoKey = '';
+    lastLogSize = -1;
+    updatePanels();
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    if (running) {
+      acc += dt * Number(el('speed').value);
+      let n = 0;
+      while (acc >= 1 / 30 && n < 60) { pond.tick(1 / 30); acc -= 1 / 30; n++; }
+      if (n === 60) acc = 0;
+    }
+    render();
+    updatePanels();
+    requestAnimationFrame(frame);
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / scale;
+    const y = (e.clientY - rect.top) / scale;
+    let best = null, bd = (26 / Math.min(1, scale)) ** 2;
+    for (const c of pond.creatures) {
+      const d = (c.x - x) ** 2 + (c.y - y) ** 2;
+      if (d < bd) { bd = d; best = c; }
+    }
+    selected = best;
+    infoKey = '';
+  });
+
+  el('play').addEventListener('click', () => {
+    running = !running;
+    el('play').textContent = running ? '一時停止' : '再開';
+  });
+  el('restart').addEventListener('click', newPond);
+  el('newPond').addEventListener('click', () => { seed = Math.floor(Math.random() * 2 ** 31); newPond(); });
+  ['power', 'childRule', 'inherit', 'count'].forEach((id) => el(id).addEventListener('change', newPond));
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readPalette(); buildLegend(); });
+  window.addEventListener('resize', resize);
+
+  readPalette();
+  buildLegend();
+  resize();
+  newPond();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
