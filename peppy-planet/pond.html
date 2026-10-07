@@ -117,11 +117,55 @@
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
   @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
   .pond {
+    position: relative;
     border-radius: 10px;
     overflow: hidden;
     border: 1px solid var(--border);
   }
   .pond canvas { display: block; width: 100%; cursor: pointer; touch-action: manipulation; }
+  /* 全画面：池だけを画面いっぱいに表示する */
+  .pond.fs {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    border: 0;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(var(--water-top), var(--water-bottom));
+  }
+  .pond.fs.idle canvas { cursor: none; }
+  .fs-btn {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(10, 20, 30, 0.45);
+    color: #ffffff;
+    backdrop-filter: blur(4px);
+  }
+  .fs-btn:hover { border-color: rgba(255, 255, 255, 0.7); }
+  .fs-open { position: absolute; top: 8px; right: 8px; }
+  .pond.fs .fs-open { display: none; }
+  .fs-bar, .fs-caption { display: none; position: absolute; transition: opacity 0.5s; }
+  .fs-bar {
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+  .fs-caption {
+    left: max(12px, env(safe-area-inset-left));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(10, 20, 30, 0.45);
+    color: #ffffff;
+    font-size: 0.85rem;
+  }
+  .pond.fs .fs-bar { display: flex; }
+  .pond.fs .fs-caption:not(:empty) { display: block; }
+  .pond.fs.idle .fs-bar, .pond.fs.idle .fs-caption { opacity: 0; pointer-events: none; }
   .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; color: var(--text-2); margin-top: 8px; }
   .legend span { display: flex; align-items: center; gap: 6px; }
   .legend canvas { width: 30px; height: 18px; }
@@ -158,6 +202,7 @@
     ♂・♀・Pの生き物たちが池を泳ぎ、えさを食べ、出会い、卵を産みます。
     違う性の2匹が出会うと寄り添い（ハートの線）、そこへ3つ目の性が加わると3性の交配（光る三角形）になって、光る3性の子が生まれます。
     生き物を押すと、その一匹のことが分かります。
+    池の右上の「⛶ 全画面」（または F キー）で、池だけを画面いっぱいに映せます。
   </p>
 
   <div class="settings">
@@ -218,7 +263,16 @@
 
   <div class="layout">
     <div>
-      <div class="pond"><canvas id="pond" aria-label="池のようす。生き物を押すと詳しく表示します"></canvas></div>
+      <div class="pond" id="pondWrap">
+        <canvas id="pond" aria-label="池のようす。生き物を押すと詳しく表示します"></canvas>
+        <button class="fs-btn fs-open" id="fsOpen" title="全画面で見る（F キー）">⛶ 全画面</button>
+        <div class="fs-bar">
+          <button class="fs-btn" id="fsPlay">⏸ 一時停止</button>
+          <button class="fs-btn" id="fsSound">♪ 音を出す</button>
+          <button class="fs-btn" id="fsClose">✕ 全画面を終える</button>
+        </div>
+        <div class="fs-caption" id="fsCaption"></div>
+      </div>
       <div class="legend" id="legend"></div>
     </div>
     <div class="side">
@@ -523,6 +577,8 @@ function createPond(opts, seed) {
   const el = (id) => document.getElementById(id);
   const canvas = el('pond');
   const ctx = canvas.getContext('2d');
+  const wrap = el('pondWrap');
+  let fsActive = false;
 
   let pond = null;
   let seed = 1;
@@ -686,8 +742,18 @@ function createPond(opts, seed) {
   // ---------- 池の描画 ----------
   function resize() {
     const dpr = window.devicePixelRatio || 1;
-    const width = canvas.parentElement.clientWidth;
-    scale = width / POND_W;
+    let width;
+    if (fsActive) {
+      // 全画面では、池の縦横比を保ったまま画面に収まる最大の大きさにする
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      scale = Math.min(w / POND_W, h / POND_H);
+      width = POND_W * scale;
+      canvas.style.width = width + 'px';
+    } else {
+      canvas.style.width = '';
+      width = wrap.clientWidth;
+      scale = width / POND_W;
+    }
     canvas.style.height = POND_H * scale + 'px';
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(POND_H * scale * dpr);
@@ -819,6 +885,22 @@ function createPond(opts, seed) {
         : '<li>まだ何も起きていません。</li>';
     }
     updateInfo();
+    updateCaption();
+  }
+
+  // 全画面では情報欄が見えないので、選んだ一匹のことを左下に短く表示する
+  let captionKey = '';
+  function updateCaption() {
+    let text = '';
+    if (fsActive && selected && !selected.dead) {
+      const c = selected;
+      const born = c.parents.length === 3 ? '・3性の交配で誕生' : c.parents.length === 2 ? '・2性の交配で誕生' : '';
+      text = `${SEX_NAME[c.sex]}${c.sp ? '・3性の子 ✦' : ''}・第${c.gen}世代・${stageName(c)}${born}・子${c.children}匹`;
+    }
+    if (text !== captionKey) {
+      captionKey = text;
+      el('fsCaption').textContent = text;
+    }
   }
 
   const stageName = (c) => c.stage === 'egg' ? '卵' : c.stage === 'young' ? '子ども' : c.age > c.lifespan * 0.75 ? 'お年より' : '大人';
@@ -1117,14 +1199,94 @@ function createPond(opts, seed) {
     infoKey = '';
   });
 
-  el('play').addEventListener('click', () => {
+  function togglePlay() {
     running = !running;
     el('play').textContent = running ? '一時停止' : '再開';
-  });
-  el('sound').addEventListener('click', async () => {
+    el('fsPlay').textContent = running ? '⏸ 一時停止' : '▶ 再開';
+  }
+  async function toggleSound() {
     const on = await audio.toggle();
     el('sound').setAttribute('aria-pressed', String(on));
     el('sound').textContent = on ? '♪ 音を止める' : '♪ 音を出す';
+    el('fsSound').textContent = on ? '♪ 音を止める' : '♪ 音を出す';
+  }
+  el('play').addEventListener('click', togglePlay);
+  el('fsPlay').addEventListener('click', togglePlay);
+  el('sound').addEventListener('click', toggleSound);
+  el('fsSound').addEventListener('click', toggleSound);
+
+  // ---------- 全画面 ----------
+  // ブラウザの全画面機能が使えないとき（iPhone など）は、ページの中で画面いっぱいに広げる
+  const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+  function enterFullscreen() {
+    const request = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
+    if (!request) { setFullscreen(true); return; }
+    try {
+      const result = request.call(wrap);
+      if (result && result.catch) result.catch(() => setFullscreen(true));
+    } catch {
+      setFullscreen(true);
+    }
+  }
+  function exitFullscreen() {
+    if (fullscreenElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else setFullscreen(false);
+  }
+  function setFullscreen(on) {
+    fsActive = on;
+    wrap.classList.toggle('fs', on);
+    document.body.style.overflow = on ? 'hidden' : '';
+    resize();
+    keepAwake(on);
+    poke();
+  }
+  const onFullscreenChange = () => setFullscreen(!!fullscreenElement());
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+  el('fsOpen').addEventListener('click', enterFullscreen);
+  el('fsClose').addEventListener('click', exitFullscreen);
+
+  // 操作しないでいると、ボタンとマウスの矢印を隠す
+  let idleTimer = null;
+  function poke() {
+    wrap.classList.remove('idle');
+    clearTimeout(idleTimer);
+    if (fsActive) idleTimer = setTimeout(() => wrap.classList.add('idle'), 3000);
+  }
+  wrap.addEventListener('pointermove', poke);
+  wrap.addEventListener('pointerdown', poke);
+
+  // 全画面で眺めている間は、画面が暗くならないようにする（対応しているブラウザのみ）
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && !wakeLock && 'wakeLock' in navigator && document.visibilityState === 'visible') {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      } else if (!on && wakeLock) {
+        await wakeLock.release();
+        wakeLock = null;
+      }
+    } catch {
+      wakeLock = null;
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && fsActive) keepAwake(true);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest('input, select, textarea')) return;
+    if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      if (fsActive) exitFullscreen(); else enterFullscreen();
+    } else if (e.key === 'Escape' && fsActive && !fullscreenElement()) {
+      setFullscreen(false);
+    } else if (e.code === 'Space' && fsActive) {
+      e.preventDefault();
+      togglePlay();
+      poke();
+    }
   });
   el('volume').addEventListener('input', audio.setVolume);
   el('restart').addEventListener('click', newPond);
